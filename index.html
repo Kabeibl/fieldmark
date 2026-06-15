@@ -228,10 +228,12 @@
 const KEY = "fieldmark.marks.v1";
 
 /* ============ Map tile sources ============ */
+// Note: MML_KEY is visible in page source — free tier, read-only tile access only
+const MML_KEY = "37bea0ae-38cf-43eb-95d0-5834e3d53114";
 const TILE_CONFIGS = {
   maastokartta: {
-    url: "https://tiles.kartat.kapsi.fi/maastokartta/{z}/{x}/{y}.jpg",
-    opts: { maxZoom:19, maxNativeZoom:16, attribution:'&copy; <a href="https://www.maanmittauslaitos.fi">Maanmittauslaitos</a> / <a href="https://www.kapsi.fi">Kapsi</a>' }
+    url: `https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/maastokartta/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.png?api-key=${MML_KEY}`,
+    opts: { maxZoom:19, maxNativeZoom:16, attribution:'&copy; <a href="https://www.maanmittauslaitos.fi">Maanmittauslaitos</a>' }
   },
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
