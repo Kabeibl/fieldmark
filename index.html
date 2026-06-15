@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fi">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
@@ -34,6 +34,10 @@
   .brand .tag{font-size:11px;color:var(--ink-soft);letter-spacing:.5px;text-transform:uppercase;}
   .count{margin-left:auto;pointer-events:auto;font-size:12px;color:var(--ink-soft);
     background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:4px 10px;}
+  .lang-btn{pointer-events:auto;font-size:11px;font-weight:600;letter-spacing:.6px;
+    border:1px solid var(--line);border-radius:20px;padding:4px 10px;
+    background:var(--paper);color:var(--ink-soft);cursor:pointer;font-family:inherit;}
+  .lang-btn:active{transform:scale(.95);}
 
   /* ---- floating buttons ---- */
   .fab{position:fixed;right:16px;z-index:600;width:52px;height:52px;border-radius:50%;
@@ -163,58 +167,59 @@
 
 <div class="topbar">
   <div class="brand"><h1>Forest Walk &amp; Talk</h1></div>
-  <div class="count" id="count">0 marks</div>
+  <button id="langBtn" class="lang-btn">FI</button>
+  <div class="count" id="count">0 merkintää</div>
 </div>
 
-<button class="fab" id="recenter" title="Recenter on me" aria-label="Recenter">
+<button class="fab" id="recenter" title="Keskitä sijaintiin" aria-label="Keskitä sijaintiin">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
 </button>
-<button class="fab" id="standsToggle" title="Show stand boundaries" aria-label="Show stand boundaries">
+<button class="fab" id="standsToggle" title="Näytä kuviorajat" aria-label="Näytä kuviorajat">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 12 3 21 6 21 18 12 21 3 18 3 6"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
   <span class="map-label">KUV</span>
 </button>
-<button class="fab" id="mapToggle" title="Switch to satellite" aria-label="Switch to satellite">
+<button class="fab" id="mapToggle" title="Vaihda: satelliitti" aria-label="Vaihda: satelliitti">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
   <span class="map-label" id="mapLabel">TOPO</span>
 </button>
-<button class="fab" id="listBtn" title="All marks" aria-label="List">
+<button class="fab" id="listBtn" title="Kaikki merkinnät" aria-label="Kaikki merkinnät">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.2"/><circle cx="3.5" cy="12" r="1.2"/><circle cx="3.5" cy="18" r="1.2"/></svg>
 </button>
 
-<div class="hint" id="hint">Tap the map to drop a mark</div>
+<div class="hint" id="hint">Napauta karttaa lisätäksesi merkinnän</div>
 <div class="toast" id="toast"></div>
 
 <!-- ===== Add / Edit sheet ===== -->
 <div class="scrim" id="addScrim">
   <div class="sheet" role="dialog" aria-modal="true">
     <div class="grip"></div>
-    <h2 id="addTitle">New mark</h2>
+    <h2 id="addTitle">Uusi merkintä</h2>
     <div class="sub" id="addSub"></div>
-    <textarea id="noteText" placeholder="Write a note… (optional)"></textarea>
+    <textarea id="noteText" placeholder="Kirjoita muistiinpano… (valinnainen)"></textarea>
 
     <div class="row">
       <label class="chip" id="photoChip">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
-        <span>Photo</span>
+        <span data-i18n="photo">Valokuva</span>
         <input type="file" id="photoInput" accept="image/*" multiple capture="environment" hidden />
       </label>
       <button class="chip" id="audioChip" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></svg>
-        <span id="audioLabel">Record</span>
+        <span id="audioLabel">Äänitä</span>
       </button>
     </div>
 
     <div class="recbar" id="recBar" style="display:none;">
-      <span class="recdot"></span><span>Recording</span>
+      <span class="recdot"></span><span data-i18n="recording">Äänitetään…</span>
       <span class="rectime" id="recTime">0:00</span>
-      <button class="btn primary" id="stopRec" style="flex:0 0 auto;padding:8px 14px;margin:0;">Stop</button>
+      <button class="btn primary" id="stopRec" style="flex:0 0 auto;padding:8px 14px;margin:0;" data-i18n="stop">Lopeta</button>
     </div>
 
     <div class="previews" id="previews"></div>
 
     <div class="actions">
-      <button class="btn ghost" id="cancelAdd">Cancel</button>
-      <button class="btn primary" id="saveAdd">Save mark</button>
+      <button class="btn ghost" id="cancelAdd" data-i18n="cancel">Peruuta</button>
+      <button class="btn primary" id="saveAdd">Tallenna merkintä</button>
     </div>
   </div>
 </div>
@@ -223,13 +228,13 @@
 <div class="scrim" id="viewScrim">
   <div class="sheet" role="dialog" aria-modal="true">
     <div class="grip"></div>
-    <h2 id="viewTitle">Mark</h2>
+    <h2 id="viewTitle">Merkintä</h2>
     <div class="sub" id="viewSub"></div>
     <div id="viewBody"></div>
     <div class="actions">
-      <button class="btn ghost" id="closeView">Close</button>
-      <button class="btn primary" id="editMark">Edit</button>
-      <button class="btn danger" id="deleteMark">Delete</button>
+      <button class="btn ghost" id="closeView" data-i18n="close">Sulje</button>
+      <button class="btn primary" id="editMark" data-i18n="edit">Muokkaa</button>
+      <button class="btn danger" id="deleteMark" data-i18n="delete">Poista</button>
     </div>
   </div>
 </div>
@@ -238,10 +243,10 @@
 <div class="scrim" id="listScrim">
   <div class="sheet" role="dialog" aria-modal="true">
     <div class="grip"></div>
-    <h2>All marks</h2>
+    <h2 data-i18n="all_marks">Kaikki merkinnät</h2>
     <div class="sub" id="listSub"></div>
     <div id="listBody"></div>
-    <div class="actions"><button class="btn ghost" id="closeList">Close</button></div>
+    <div class="actions"><button class="btn ghost" id="closeList" data-i18n="close">Sulje</button></div>
   </div>
 </div>
 
@@ -249,15 +254,15 @@
 <div class="scrim" id="standScrim">
   <div class="sheet" role="dialog" aria-modal="true">
     <div class="grip"></div>
-    <h2>Stand</h2>
+    <h2 data-i18n="stand">Kuvio</h2>
     <div class="sub" id="standSub"></div>
     <div id="standFields"></div>
     <div class="stand-note">
-      <textarea id="standNote" placeholder="Notes…"></textarea>
+      <textarea id="standNote" placeholder="Muistiinpanot…"></textarea>
     </div>
     <div class="actions">
-      <button class="btn ghost" id="closeStand">Close</button>
-      <button class="btn primary" id="saveStand">Save</button>
+      <button class="btn ghost" id="closeStand" data-i18n="close">Sulje</button>
+      <button class="btn primary" id="saveStand" data-i18n="save">Tallenna</button>
     </div>
   </div>
 </div>
@@ -271,15 +276,159 @@ const KEY = "fieldmark.marks.v1";
 // Paste your Worker URL here after deploying worker/
 const PROXY_URL = "https://fwt-wfs-proxy.abel-onditi.workers.dev";
 const STANDS_KEY = "fwt.stands.v1";
-const STAND_FIELDS = [
-  { key:"DEVELOPMENTCLASS", label:"Kehitysluokka", unit:""       },
-  { key:"MEANAGE",          label:"Ikä",           unit:"v"      },
-  { key:"BASALAREA",        label:"Ppa",           unit:"m²/ha"  },
-  { key:"MEANHEIGHT",       label:"Pituus",        unit:"m"      },
-  { key:"MEANDIAMETER",     label:"Lpm",           unit:"cm"     },
-  { key:"MAINTREESPECIES",  label:"Pääpuulaji",    unit:""       },
-  { key:"VOLUME",           label:"Tilavuus",      unit:"m³/ha"  },
-];
+
+/* ============ Localisation ============ */
+const LANGS = {
+  fi: {
+    hint:            "Napauta karttaa lisätäksesi merkinnän",
+    recenter:        "Keskitä sijaintiin",
+    stands_show:     "Näytä kuviorajat",
+    stands_hide:     "Piilota kuviorajat",
+    switch_to:       n => `Vaihda: ${n}`,
+    map_names:       { topo:"maastokartta", satellite:"satelliitti", streets:"kartta" },
+    photo:           "Valokuva",
+    record:          "Äänitä",
+    recorded:        "Äänitetty",
+    recording:       "Äänitetään…",
+    stop:            "Lopeta",
+    cancel:          "Peruuta",
+    new_mark:        "Uusi merkintä",
+    edit_mark:       "Muokkaa merkintää",
+    save_mark:       "Tallenna merkintä",
+    update_mark:     "Päivitä merkintä",
+    title_note:      "Muistiinpano",
+    title_mark:      "Merkintä",
+    close:           "Sulje",
+    edit:            "Muokkaa",
+    delete:          "Poista",
+    empty_mark:      "Tyhjä merkintä",
+    all_marks:       "Kaikki merkinnät",
+    n_saved:         n => `${n} tallennettua`,
+    no_marks:        "Ei merkintöjä vielä.<br>Napauta karttaa lisätäksesi ensimmäisen.",
+    note_ph:         "Kirjoita muistiinpano… (valinnainen)",
+    stand:           "Kuvio",
+    stand_note_ph:   "Muistiinpanot…",
+    save:            "Tallenna",
+    original:        v => `Alkuperäinen: ${v}`,
+    voice_note:      "äänimuistiinpano",
+    voice_note_chip: "🎙 äänimuistiinpano",
+    photos_count:    n => n === 1 ? "1 kuva" : `${n} kuvaa`,
+    count_marks:     n => n === 1 ? "1 merkintä" : `${n} merkintää`,
+    toast_proxy:     "Aseta PROXY_URL tiedostossa index.html",
+    toast_looking:   "Haetaan kuviota…",
+    toast_no_stand:  "Kuviota ei löydy tästä",
+    toast_stand_err: "Kuvion haku epäonnistui",
+    toast_stand_ok:  "Kuvio tallennettu",
+    toast_loc_no:    "Sijainti ei ole tuettu",
+    toast_loc_https: "Sijaintia ei saada – tarvitaan HTTPS. Napauta karttaa lisätäksesi merkintöjä.",
+    toast_loc_err:   "Sijainti ei ole saatavilla",
+    toast_rec_no:    "Äänitys ei ole tuettu",
+    toast_mic:       "Mikrofonin käyttöoikeus evätty",
+    toast_2min:      "2 min raja saavutettu",
+    toast_photo_err: "Kuvan lisääminen epäonnistui",
+    toast_full:      "Tallennustila täynnä – poista merkintä tai pienennä mediaa",
+    toast_save_err:  "Tallennus epäonnistui – tallennustila voi olla täynnä",
+    toast_almost:    mb => `Tallennustila melkein täynnä (${mb}Mt / 5)`,
+    toast_budget:    "Tallennustila alkaa täyttyä",
+    toast_need_cont: "Lisää muistiinpano, kuva tai äänitys ensin",
+    toast_mark_ok:   "Merkintä tallennettu",
+    toast_mark_upd:  "Merkintä päivitetty",
+    toast_mark_del:  "Merkintä poistettu",
+    stand_fields: [
+      { key:"DEVELOPMENTCLASS", label:"Kehitysluokka", unit:""      },
+      { key:"MEANAGE",          label:"Ikä",           unit:"v"     },
+      { key:"BASALAREA",        label:"Ppa",           unit:"m²/ha" },
+      { key:"MEANHEIGHT",       label:"Pituus",        unit:"m"     },
+      { key:"MEANDIAMETER",     label:"Lpm",           unit:"cm"    },
+      { key:"MAINTREESPECIES",  label:"Pääpuulaji",    unit:""      },
+      { key:"VOLUME",           label:"Tilavuus",      unit:"m³/ha" },
+    ],
+  },
+  en: {
+    hint:            "Tap the map to drop a mark",
+    recenter:        "Recenter on me",
+    stands_show:     "Show stand boundaries",
+    stands_hide:     "Hide stand boundaries",
+    switch_to:       n => `Switch to ${n}`,
+    map_names:       { topo:"topographic", satellite:"satellite", streets:"map" },
+    photo:           "Photo",
+    record:          "Record",
+    recorded:        "Recorded",
+    recording:       "Recording…",
+    stop:            "Stop",
+    cancel:          "Cancel",
+    new_mark:        "New mark",
+    edit_mark:       "Edit mark",
+    save_mark:       "Save mark",
+    update_mark:     "Update mark",
+    title_note:      "Note",
+    title_mark:      "Mark",
+    close:           "Close",
+    edit:            "Edit",
+    delete:          "Delete",
+    empty_mark:      "Empty mark",
+    all_marks:       "All marks",
+    n_saved:         n => `${n} saved`,
+    no_marks:        "No marks yet.<br>Tap the map to drop your first one.",
+    note_ph:         "Write a note… (optional)",
+    stand:           "Stand",
+    stand_note_ph:   "Notes…",
+    save:            "Save",
+    original:        v => `Original: ${v}`,
+    voice_note:      "voice note",
+    voice_note_chip: "🎙 voice note",
+    photos_count:    n => n === 1 ? "1 photo" : `${n} photos`,
+    count_marks:     n => n === 1 ? "1 mark" : `${n} marks`,
+    toast_proxy:     "Set PROXY_URL in index.html to enable stand lookup",
+    toast_looking:   "Looking up stand…",
+    toast_no_stand:  "No stand found here",
+    toast_stand_err: "Stand lookup failed",
+    toast_stand_ok:  "Stand saved",
+    toast_loc_no:    "Location not supported here",
+    toast_loc_https: "Can't get location — needs HTTPS. Tap map to add marks.",
+    toast_loc_err:   "Location unavailable",
+    toast_rec_no:    "Recording not supported here",
+    toast_mic:       "Mic permission denied",
+    toast_2min:      "2 min limit reached",
+    toast_photo_err: "Couldn't add a photo",
+    toast_full:      "Storage full — delete a mark or shrink media",
+    toast_save_err:  "Save failed — storage may be full",
+    toast_almost:    mb => `Storage almost full (${mb}MB of 5)`,
+    toast_budget:    "Getting close to storage limit",
+    toast_need_cont: "Add a note, photo, or recording first",
+    toast_mark_ok:   "Mark saved",
+    toast_mark_upd:  "Mark updated",
+    toast_mark_del:  "Mark deleted",
+    stand_fields: [
+      { key:"DEVELOPMENTCLASS", label:"Development class",  unit:""      },
+      { key:"MEANAGE",          label:"Age",                unit:"yr"    },
+      { key:"BASALAREA",        label:"Basal area",         unit:"m²/ha" },
+      { key:"MEANHEIGHT",       label:"Height",             unit:"m"     },
+      { key:"MEANDIAMETER",     label:"Diameter",           unit:"cm"    },
+      { key:"MAINTREESPECIES",  label:"Main tree species",  unit:""      },
+      { key:"VOLUME",           label:"Volume",             unit:"m³/ha" },
+    ],
+  },
+};
+let lang = localStorage.getItem("fwt.lang") || "fi";
+const tr = (key, ...args) => { const v = LANGS[lang][key]; return typeof v === "function" ? v(...args) : v; };
+
+function applyLang(){
+  document.documentElement.lang = lang;
+  $("langBtn").textContent = lang.toUpperCase();
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = tr(el.dataset.i18n); });
+  $("noteText").placeholder = tr("note_ph");
+  $("standNote").placeholder = tr("stand_note_ph");
+  $("recenter").title = tr("recenter"); $("recenter").setAttribute("aria-label", tr("recenter"));
+  $("listBtn").title = tr("all_marks"); $("listBtn").setAttribute("aria-label", tr("all_marks"));
+  const sLabel = tr(standsVisible ? "stands_hide" : "stands_show");
+  $("standsToggle").title = sLabel; $("standsToggle").setAttribute("aria-label", sLabel);
+  updateMapToggleLabel();
+  updateCount();
+  const audioState = mediaRec && mediaRec.state === "recording" ? "recording"
+                   : pending && pending.audio ? "recorded" : "record";
+  $("audioLabel").textContent = tr(audioState);
+}
 
 /* ============ Map tile sources ============ */
 // Note: MML_KEY is visible in page source — free tier, read-only tile access only
@@ -288,17 +437,17 @@ const TILE_CONFIGS = {
   topo: {
     url: `https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/maastokartta/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.png?api-key=${MML_KEY}`,
     opts: { maxZoom:19, maxNativeZoom:16, attribution:'&copy; <a href="https://www.maanmittauslaitos.fi">Maanmittauslaitos</a>' },
-    label:"TOPO", next:"satellite", nextName:"satellite"
+    label:"TOPO", next:"satellite"
   },
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     opts: { maxZoom:20, attribution:'&copy; Esri, DigitalGlobe, GeoEye, Earthstar Geographics' },
-    label:"SAT", next:"streets", nextName:"map"
+    label:"SAT", next:"streets"
   },
   streets: {
     url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
     opts: { maxZoom:20, subdomains:"abcd", attribution:'&copy; OpenStreetMap &copy; CARTO' },
-    label:"MAP", next:"topo", nextName:"topographic"
+    label:"MAP", next:"topo"
   }
 };
 const Store = (() => {
@@ -336,8 +485,8 @@ let viewingId = null;
 const $ = id => document.getElementById(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 function toast(msg, warn){
-  const t = $("toast"); t.textContent = msg; t.className = "toast show" + (warn?" warn":"");
-  clearTimeout(t._t); t._t = setTimeout(()=>{ t.className = "toast"; }, 2600);
+  const el = $("toast"); el.textContent = msg; el.className = "toast show" + (warn?" warn":"");
+  clearTimeout(el._t); el._t = setTimeout(()=>{ el.className = "toast"; }, 2600);
 }
 function fmtDate(ts){
   const d = new Date(ts);
@@ -354,9 +503,9 @@ function contentDots(m){
 function summary(m){
   if(m.text && m.text.trim()) return m.text.trim().split("\n")[0];
   const parts=[];
-  if(m.photos&&m.photos.length) parts.push(m.photos.length+" photo"+(m.photos.length>1?"s":""));
-  if(m.audio) parts.push("voice note");
-  return parts.join(" · ") || "Empty mark";
+  if(m.photos&&m.photos.length) parts.push(tr("photos_count", m.photos.length));
+  if(m.audio) parts.push(tr("voice_note"));
+  return parts.join(" · ") || tr("empty_mark");
 }
 
 /* ============ Map ============ */
@@ -374,11 +523,11 @@ function initMap(){
   const con = map.getContainer();
   con.addEventListener("touchstart", e => {
     if(e.touches.length !== 1) return;
-    const t = e.touches[0];
+    const touch = e.touches[0];
     lpTimer = setTimeout(() => {
       lpTimer = null;
       const r = con.getBoundingClientRect();
-      openStandAt(map.containerPointToLatLng(L.point(t.clientX - r.left, t.clientY - r.top)));
+      openStandAt(map.containerPointToLatLng(L.point(touch.clientX - r.left, touch.clientY - r.top)));
     }, 600);
   }, {passive:true});
   con.addEventListener("touchend",  () => { clearTimeout(lpTimer); lpTimer = null; }, {passive:true});
@@ -391,15 +540,20 @@ function initMap(){
   locate(true);
 }
 
+function updateMapToggleLabel(){
+  const cfg = TILE_CONFIGS[currentMapType];
+  const hint = tr("switch_to", tr("map_names")[cfg.next]);
+  $("mapToggle").title = hint;
+  $("mapToggle").setAttribute("aria-label", hint);
+}
+
 function setMapType(type){
   if(tileLayer) map.removeLayer(tileLayer);
   const cfg = TILE_CONFIGS[type];
   tileLayer = L.tileLayer(cfg.url, cfg.opts).addTo(map);
   currentMapType = type;
   $("mapLabel").textContent = cfg.label;
-  const hint = "Switch to " + cfg.nextName;
-  $("mapToggle").title = hint;
-  $("mapToggle").setAttribute("aria-label", hint);
+  updateMapToggleLabel();
 }
 
 /* ============ Stands ============ */
@@ -426,17 +580,17 @@ async function loadStands(){
 }
 
 async function openStandAt(latlng){
-  if(!PROXY_URL){ toast("Set PROXY_URL in index.html to enable stand lookup", true); return; }
+  if(!PROXY_URL){ toast(tr("toast_proxy"), true); return; }
   const filter = encodeURIComponent(`INTERSECTS(GEOMETRY,SRID=4326;POINT(${latlng.lng} ${latlng.lat}))`);
   const url = `${PROXY_URL}?service=WFS&version=2.0.0&request=GetFeature` +
     `&typeNames=v1:stand&CQL_FILTER=${filter}&outputFormat=application/json&srsName=CRS:84&count=1`;
   try{
-    toast("Looking up stand…");
+    toast(tr("toast_looking"));
     const res = await fetch(url);
     const data = await res.json();
     if(data.features && data.features.length){ showStandSheet(data.features[0]); }
-    else { toast("No stand found here"); }
-  }catch(e){ toast("Stand lookup failed", true); console.warn(e); }
+    else { toast(tr("toast_no_stand")); }
+  }catch(e){ toast(tr("toast_stand_err"), true); console.warn(e); }
 }
 
 function showStandSheet(feature){
@@ -448,7 +602,7 @@ function showStandSheet(feature){
   $("standSub").textContent = id;
   const box = $("standFields");
   box.innerHTML = "";
-  STAND_FIELDS.forEach(f => {
+  LANGS[lang].stand_fields.forEach(f => {
     const apiVal = p[f.key] ?? "–";
     const apiStr = String(apiVal);
     const isEdited = saved[f.key] !== undefined && saved[f.key] !== apiStr;
@@ -461,7 +615,7 @@ function showStandSheet(feature){
     inp.type = "text"; inp.value = localVal;
     const unit = document.createElement("span"); unit.className = "stand-unit"; unit.textContent = f.unit;
     const orig = document.createElement("span"); orig.className = "stand-orig";
-    orig.textContent = `Original: ${apiStr}${f.unit ? " " + f.unit : ""}`;
+    orig.textContent = tr("original", `${apiStr}${f.unit ? " " + f.unit : ""}`);
     row.append(lbl, inp, unit, orig);
     box.appendChild(row);
   });
@@ -486,7 +640,7 @@ $("saveStand").onclick = () => {
   standEdits[currentStandId] = saved;
   localStorage.setItem(STANDS_KEY, JSON.stringify(standEdits));
   $("standScrim").classList.remove("open");
-  toast("Stand saved");
+  toast(tr("toast_stand_ok"));
 };
 $("closeStand").onclick = () => $("standScrim").classList.remove("open");
 $("standScrim").addEventListener("click", e => { if(e.target.id === "standScrim") $("standScrim").classList.remove("open"); });
@@ -494,7 +648,7 @@ $("standScrim").addEventListener("click", e => { if(e.target.id === "standScrim"
 $("standsToggle").onclick = () => {
   standsVisible = !standsVisible;
   $("standsToggle").classList.toggle("active", standsVisible);
-  const label = standsVisible ? "Hide stand boundaries" : "Show stand boundaries";
+  const label = tr(standsVisible ? "stands_hide" : "stands_show");
   $("standsToggle").title = label;
   $("standsToggle").setAttribute("aria-label", label);
   if(standsVisible) loadStands(); else standsLayer.clearLayers();
@@ -523,11 +677,11 @@ function renderAllPins(){
   marks.forEach(addPin);
   updateCount();
 }
-function updateCount(){ $("count").textContent = marks.length + (marks.length===1?" mark":" marks"); }
+function updateCount(){ $("count").textContent = tr("count_marks", marks.length); }
 
 /* ============ Geolocation ============ */
 function locate(initial){
-  if(!navigator.geolocation){ toast("Location not supported here", true); return; }
+  if(!navigator.geolocation){ toast(tr("toast_loc_no"), true); return; }
   $("recenter").classList.add("locating");
   navigator.geolocation.getCurrentPosition(pos=>{
     $("recenter").classList.remove("locating");
@@ -537,12 +691,7 @@ function locate(initial){
     hasLocated = true;
   }, err=>{
     $("recenter").classList.remove("locating");
-    if(initial){
-      // HTTPS required; fails on file:// or sandbox
-      toast("Can't get location — needs HTTPS. Tap map to add marks.", true);
-    } else {
-      toast("Location unavailable", true);
-    }
+    toast(initial ? tr("toast_loc_https") : tr("toast_loc_err"), true);
   }, {enableHighAccuracy:true, timeout:10000, maximumAge:5000});
 }
 function startWatch(){
@@ -571,28 +720,28 @@ $("recenter").onclick = () => {
 /* ============ Add mark ============ */
 function openAdd(lat,lng){
   pending = {lat,lng,photos:[],audio:null,editId:null};
-  $("addTitle").textContent = "New mark";
+  $("addTitle").textContent = tr("new_mark");
   $("addSub").textContent = lat.toFixed(5)+", "+lng.toFixed(5);
   $("noteText").value = "";
   $("photoChip").classList.remove("has");
   $("audioChip").classList.remove("has");
-  $("audioLabel").textContent = "Record";
+  $("audioLabel").textContent = tr("record");
   $("recBar").style.display = "none";
-  $("saveAdd").textContent = "Save mark";
+  $("saveAdd").textContent = tr("save_mark");
   renderPreviews();
   $("addScrim").classList.add("open");
 }
 function openEdit(id){
   const m = marks.find(x=>x.id===id); if(!m) return;
   pending = {lat:m.lat, lng:m.lng, photos:[...(m.photos||[])], audio:m.audio||null, editId:id};
-  $("addTitle").textContent = "Edit mark";
+  $("addTitle").textContent = tr("edit_mark");
   $("addSub").textContent = m.lat.toFixed(5)+", "+m.lng.toFixed(5);
   $("noteText").value = m.text || "";
   $("photoChip").classList.toggle("has", pending.photos.length>0);
   $("audioChip").classList.toggle("has", !!pending.audio);
-  $("audioLabel").textContent = pending.audio ? "Recorded" : "Record";
+  $("audioLabel").textContent = pending.audio ? tr("recorded") : tr("record");
   $("recBar").style.display = "none";
-  $("saveAdd").textContent = "Update mark";
+  $("saveAdd").textContent = tr("update_mark");
   renderPreviews();
   $("addScrim").classList.add("open");
 }
@@ -605,7 +754,7 @@ $("photoInput").addEventListener("change", async e=>{
   const files = [...e.target.files];
   for(const f of files){
     try{ const data = await compressImage(f); pending.photos.push(data); }
-    catch(err){ toast("Couldn't add a photo", true); }
+    catch(err){ toast(tr("toast_photo_err"), true); }
   }
   $("photoInput").value = "";
   if(pending.photos.length) $("photoChip").classList.add("has");
@@ -636,7 +785,7 @@ function renderPreviews(){
   });
   if(pending.audio){
     const a=document.createElement("div"); a.className="audiochip";
-    a.innerHTML=`<span>🎙 voice note</span><button class="x" data-audio="1" style="position:static;width:18px;height:18px;">×</button>`;
+    a.innerHTML=`<span>${tr("voice_note_chip")}</span><button class="x" data-audio="1" style="position:static;width:18px;height:18px;">×</button>`;
     box.appendChild(a);
   }
 }
@@ -644,7 +793,7 @@ $("previews").addEventListener("click", e=>{
   if(e.target.dataset.i!==undefined){ pending.photos.splice(+e.target.dataset.i,1);
     if(!pending.photos.length) $("photoChip").classList.remove("has"); renderPreviews(); }
   if(e.target.dataset.audio){ pending.audio=null; $("audioChip").classList.remove("has");
-    $("audioLabel").textContent="Record"; renderPreviews(); }
+    $("audioLabel").textContent=tr("record"); renderPreviews(); }
 });
 
 /* audio */
@@ -653,40 +802,40 @@ const MAX_AUDIO_MS = 120000; // 2 min
 $("audioChip").onclick = ()=>{ if(mediaRec && mediaRec.state==="recording") stopRecording(); else startRecording(); };
 $("stopRec").onclick = ()=> stopRecording();
 async function startRecording(){
-  if(!navigator.mediaDevices || !window.MediaRecorder){ toast("Recording not supported here", true); return; }
+  if(!navigator.mediaDevices || !window.MediaRecorder){ toast(tr("toast_rec_no"), true); return; }
   try{
     const stream = await navigator.mediaDevices.getUserMedia({audio:true});
     mediaRec = new MediaRecorder(stream); chunks=[];
     mediaRec.ondataavailable = e=>{ if(e.data.size) chunks.push(e.data); };
     mediaRec.onstop = ()=>{
-      stream.getTracks().forEach(t=>t.stop());
+      stream.getTracks().forEach(tk=>tk.stop());
       const blob = new Blob(chunks,{type: mediaRec.mimeType||"audio/webm"});
       const r = new FileReader();
       r.onload = ()=>{ pending.audio = r.result; $("audioChip").classList.add("has");
-        $("audioLabel").textContent="Recorded"; renderPreviews(); budgetCheck(); };
+        $("audioLabel").textContent=tr("recorded"); renderPreviews(); budgetCheck(); };
       r.readAsDataURL(blob);
     };
     mediaRec.start(); recStart = Date.now();
-    $("recBar").style.display="flex"; $("audioLabel").textContent="Recording…";
+    $("recBar").style.display="flex"; $("audioLabel").textContent=tr("recording");
     recTimer = setInterval(()=>{
       const ms = Date.now()-recStart;
       const s = Math.floor(ms/1000);
       $("recTime").textContent = Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
-      if(ms>=MAX_AUDIO_MS){ toast("2 min limit reached"); stopRecording(); }
+      if(ms>=MAX_AUDIO_MS){ toast(tr("toast_2min")); stopRecording(); }
     },250);
-  }catch(e){ toast("Mic permission denied", true); }
+  }catch(e){ toast(tr("toast_mic"), true); }
 }
 function stopRecording(silent){
   if(recTimer){ clearInterval(recTimer); recTimer=null; }
   $("recBar").style.display="none";
   if(mediaRec && mediaRec.state==="recording"){ mediaRec.stop(); }
-  else if(silent && mediaRec){ try{ mediaRec.stream && mediaRec.stream.getTracks().forEach(t=>t.stop()); }catch(_){} }
+  else if(silent && mediaRec){ try{ mediaRec.stream && mediaRec.stream.getTracks().forEach(tk=>tk.stop()); }catch(_){} }
 }
 
 /* save */
 $("saveAdd").onclick = async ()=>{
   const text = $("noteText").value.trim();
-  if(!text && !pending.photos.length && !pending.audio){ toast("Add a note, photo, or recording first"); return; }
+  if(!text && !pending.photos.length && !pending.audio){ toast(tr("toast_need_cont")); return; }
 
   if(pending.editId){
     const m = marks.find(x=>x.id===pending.editId);
@@ -696,7 +845,7 @@ $("saveAdd").onclick = async ()=>{
     const size = await persist();
     if(size===false){ Object.assign(m, snap); return; }   // restore on storage failure
     refreshPin(m); closeAdd();
-    toast("Mark updated");
+    toast(tr("toast_mark_upd"));
     return;
   }
 
@@ -705,33 +854,33 @@ $("saveAdd").onclick = async ()=>{
   const size = await persist();
   if(size===false){ marks.pop(); return; }
   addPin(m); updateCount(); closeAdd();
-  toast("Mark saved");
+  toast(tr("toast_mark_ok"));
 };
 
 async function persist(){
   const size = Store.estimate(marks);
-  if(size > BUDGET){ toast("Storage full — delete a mark or shrink media", true); return false; }
+  if(size > BUDGET){ toast(tr("toast_full"), true); return false; }
   try{ await Store.save(marks); }
-  catch(e){ toast("Save failed — storage may be full", true); return false; }
-  if(size > WARN_AT) toast("Storage almost full ("+Math.round(size/1024/1024*10)/10+"MB of 5)", true);
+  catch(e){ toast(tr("toast_save_err"), true); return false; }
+  if(size > WARN_AT) toast(tr("toast_almost", Math.round(size/1024/1024*10)/10), true);
   return size;
 }
 function budgetCheck(){
   const size = Store.estimate(marks) + (pending? Store.estimate([pending]) : 0);
-  if(size > WARN_AT) toast("Getting close to storage limit", true);
+  if(size > WARN_AT) toast(tr("toast_budget"), true);
 }
 
 /* ============ View mark ============ */
 function openView(id){
   const m = marks.find(x=>x.id===id); if(!m) return;
   viewingId = id;
-  $("viewTitle").textContent = m.text && m.text.trim() ? "Note" : "Mark";
+  $("viewTitle").textContent = m.text && m.text.trim() ? tr("title_note") : tr("title_mark");
   $("viewSub").textContent = fmtDate(m.created) + "  ·  " + m.lat.toFixed(5)+", "+m.lng.toFixed(5);
   let html = "";
   if(m.text && m.text.trim()) html += `<div class="vnote">${escapeHTML(m.text)}</div>`;
   if(m.audio) html += `<audio controls src="${m.audio}"></audio>`;
   if(m.photos && m.photos.length){ html += `<div class="vimgs">` + m.photos.map(p=>`<img src="${p}">`).join("") + `</div>`; }
-  $("viewBody").innerHTML = html || `<div class="empty">Empty mark</div>`;
+  $("viewBody").innerHTML = html || `<div class="empty">${tr("empty_mark")}</div>`;
   $("viewScrim").classList.add("open");
 }
 function escapeHTML(s){ return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
@@ -744,14 +893,14 @@ $("deleteMark").onclick = async ()=>{
   if(layer.pins[viewingId]){ map.removeLayer(layer.pins[viewingId]); delete layer.pins[viewingId]; }
   await persist(); updateCount();
   $("viewScrim").classList.remove("open");
-  toast("Mark deleted");
+  toast(tr("toast_mark_del"));
 };
 
 /* ============ List view ============ */
 $("listBtn").onclick = ()=>{
   const body = $("listBody"); body.innerHTML="";
-  $("listSub").textContent = marks.length + " saved";
-  if(!marks.length){ body.innerHTML = `<div class="empty">No marks yet.<br>Tap the map to drop your first one.</div>`; }
+  $("listSub").textContent = tr("n_saved", marks.length);
+  if(!marks.length){ body.innerHTML = `<div class="empty">${tr("no_marks")}</div>`; }
   else{
     [...marks].sort((a,b)=>b.created-a.created).forEach(m=>{
       const dots = contentDots(m).map(c=>`<span class="d ${c}" style="background:${c==='ink'?'#2b2622':c==='moss'?'#5f6b3a':'#b5572f'}"></span>`).join("");
@@ -774,6 +923,13 @@ $("listBody").addEventListener("click", e=>{
 $("closeList").onclick = ()=> $("listScrim").classList.remove("open");
 $("listScrim").addEventListener("click", e=>{ if(e.target.id==="listScrim") $("listScrim").classList.remove("open"); });
 
+/* ============ Language toggle ============ */
+$("langBtn").onclick = () => {
+  lang = lang === "fi" ? "en" : "fi";
+  localStorage.setItem("fwt.lang", lang);
+  applyLang();
+};
+
 /* ============ Keyboard avoidance ============ */
 if(window.visualViewport){
   const onVV = () => {
@@ -790,6 +946,7 @@ if(window.visualViewport){
   marks = await Store.load();
   try{ const r = localStorage.getItem(STANDS_KEY); if(r) standEdits = JSON.parse(r); }catch(_){}
   renderAllPins();
+  applyLang();
   setTimeout(()=>{ $("hint").style.transition="opacity .6s"; $("hint").style.opacity="0"; }, 4000);
   if("serviceWorker" in navigator){
     window.addEventListener("load", ()=> navigator.serviceWorker.register("sw.js").catch(()=>{}));
