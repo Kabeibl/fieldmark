@@ -16,6 +16,7 @@
     --paper:#f4ece0; --paper-2:#ece1d0; --ink:#2b2622; --ink-soft:#5c5147;
     --rust:#b5572f; --rust-deep:#8f4222; --moss:#5f6b3a; --moss-deep:#47521f;
     --line:#d8cab3; --shadow:rgba(43,38,34,.18);
+    --kb:0px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);
@@ -69,12 +70,12 @@
   .dot.ink{background:var(--ink);} .dot.moss{background:var(--moss);} .dot.rust{background:var(--rust);}
 
   /* ---- sheet / modal ---- */
-  .scrim{position:fixed;inset:0;z-index:900;background:rgba(43,38,34,.42);
-    display:none;align-items:flex-end;justify-content:center;}
+  .scrim{position:fixed;inset:0;bottom:var(--kb);z-index:900;background:rgba(43,38,34,.42);
+    display:none;align-items:flex-end;justify-content:center;transition:bottom .15s ease;}
   .scrim.open{display:flex;}
   .sheet{width:100%;max-width:560px;background:var(--paper);border-radius:20px 20px 0 0;
     border-top:1px solid var(--line);box-shadow:0 -8px 30px var(--shadow);
-    padding:18px 18px calc(env(safe-area-inset-bottom) + 18px);max-height:88vh;overflow:auto;
+    padding:18px 18px calc(env(safe-area-inset-bottom) + 18px);max-height:88%;overflow:auto;
     animation:rise .22s ease;}
   @keyframes rise{from{transform:translateY(30px);opacity:.4;}to{transform:none;opacity:1;}}
   .sheet h2{font-family:"Fraunces",serif;font-weight:600;font-size:20px;margin:2px 0 2px;}
@@ -601,6 +602,16 @@ $("listBody").addEventListener("click", e=>{
 });
 $("closeList").onclick = ()=> $("listScrim").classList.remove("open");
 $("listScrim").addEventListener("click", e=>{ if(e.target.id==="listScrim") $("listScrim").classList.remove("open"); });
+
+/* ============ Keyboard avoidance ============ */
+if(window.visualViewport){
+  const onVV = () => {
+    const kb = Math.max(0, window.innerHeight - visualViewport.height - visualViewport.offsetTop);
+    document.documentElement.style.setProperty("--kb", kb + "px");
+  };
+  visualViewport.addEventListener("resize", onVV);
+  visualViewport.addEventListener("scroll", onVV);
+}
 
 /* ============ Boot ============ */
 (async function(){
