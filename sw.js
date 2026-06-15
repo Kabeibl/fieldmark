@@ -1,7 +1,7 @@
 /* Fieldmark service worker
    BUMP THIS VERSION whenever index.html (or any cached asset) changes,
    so installed copies pull the new files instead of the stale cache. */
-const CACHE = "fwt-v6";
+const CACHE = "fwt-v7";
 
 const ASSETS = [
   "./",
