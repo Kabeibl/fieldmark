@@ -200,6 +200,7 @@
     <div id="viewBody"></div>
     <div class="actions">
       <button class="btn ghost" id="closeView">Close</button>
+      <button class="btn primary" id="editMark">Edit</button>
       <button class="btn danger" id="deleteMark">Delete</button>
     </div>
   </div>
@@ -358,7 +359,7 @@ $("recenter").onclick = () => {
 
 /* ============ Add mark ============ */
 function openAdd(lat,lng){
-  pending = {lat,lng,photos:[],audio:null};
+  pending = {lat,lng,photos:[],audio:null,editId:null};
   $("addTitle").textContent = "New mark";
   $("addSub").textContent = lat.toFixed(5)+", "+lng.toFixed(5);
   $("noteText").value = "";
@@ -366,6 +367,21 @@ function openAdd(lat,lng){
   $("audioChip").classList.remove("has");
   $("audioLabel").textContent = "Record";
   $("recBar").style.display = "none";
+  $("saveAdd").textContent = "Save mark";
+  renderPreviews();
+  $("addScrim").classList.add("open");
+}
+function openEdit(id){
+  const m = marks.find(x=>x.id===id); if(!m) return;
+  pending = {lat:m.lat, lng:m.lng, photos:[...(m.photos||[])], audio:m.audio||null, editId:id};
+  $("addTitle").textContent = "Edit mark";
+  $("addSub").textContent = m.lat.toFixed(5)+", "+m.lng.toFixed(5);
+  $("noteText").value = m.text || "";
+  $("photoChip").classList.toggle("has", pending.photos.length>0);
+  $("audioChip").classList.toggle("has", !!pending.audio);
+  $("audioLabel").textContent = pending.audio ? "Recorded" : "Record";
+  $("recBar").style.display = "none";
+  $("saveAdd").textContent = "Update mark";
   renderPreviews();
   $("addScrim").classList.add("open");
 }
@@ -460,6 +476,19 @@ function stopRecording(silent){
 $("saveAdd").onclick = async ()=>{
   const text = $("noteText").value.trim();
   if(!text && !pending.photos.length && !pending.audio){ toast("Add a note, photo, or recording first"); return; }
+
+  if(pending.editId){
+    const m = marks.find(x=>x.id===pending.editId);
+    if(!m){ closeAdd(); return; }
+    const snap = {text:m.text, photos:m.photos, audio:m.audio, edited:m.edited};
+    m.text = text; m.photos = pending.photos; m.audio = pending.audio; m.edited = Date.now();
+    const size = await persist();
+    if(size===false){ Object.assign(m, snap); return; }   // restore on storage failure
+    refreshPin(m); closeAdd();
+    toast("Mark updated");
+    return;
+  }
+
   const m = {id:uid(), lat:pending.lat, lng:pending.lng, text, photos:pending.photos, audio:pending.audio, created:Date.now()};
   marks.push(m);
   const size = await persist();
@@ -495,6 +524,7 @@ function openView(id){
   $("viewScrim").classList.add("open");
 }
 function escapeHTML(s){ return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+$("editMark").onclick = ()=>{ const id = viewingId; $("viewScrim").classList.remove("open"); openEdit(id); };
 $("closeView").onclick = ()=> $("viewScrim").classList.remove("open");
 $("viewScrim").addEventListener("click", e=>{ if(e.target.id==="viewScrim") $("viewScrim").classList.remove("open"); });
 $("deleteMark").onclick = async ()=>{
