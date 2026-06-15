@@ -46,6 +46,19 @@
   #mapToggle{bottom:calc(env(safe-area-inset-bottom) + 160px);flex-direction:column;gap:2px;}
   #mapToggle svg{width:20px;height:20px;}
   #mapToggle .map-label{font-size:8px;font-weight:600;letter-spacing:.6px;line-height:1;}
+  #standsToggle{bottom:calc(env(safe-area-inset-bottom) + 228px);flex-direction:column;gap:2px;}
+  #standsToggle svg{width:20px;height:20px;}
+  #standsToggle .map-label{font-size:8px;font-weight:600;letter-spacing:.6px;line-height:1;}
+  #standsToggle.active{background:var(--moss);color:#fff;border-color:var(--moss-deep);}
+
+  /* ---- stand sheet ---- */
+  .stand-row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);}
+  .stand-lbl{font-size:12px;color:var(--ink-soft);width:108px;flex-shrink:0;}
+  .stand-input{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:5px 8px;
+    font-family:inherit;font-size:13px;background:var(--paper-2);color:var(--ink);}
+  .stand-input:focus{outline:none;border-color:var(--moss);}
+  .stand-unit{font-size:11px;color:var(--ink-soft);white-space:nowrap;min-width:36px;text-align:right;}
+  .stand-note{margin-top:14px;}
   .fab svg{width:24px;height:24px;}
   #recenter.locating svg{animation:spin 1s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
@@ -153,6 +166,10 @@
 <button class="fab" id="recenter" title="Recenter on me" aria-label="Recenter">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
 </button>
+<button class="fab" id="standsToggle" title="Show stand boundaries" aria-label="Show stand boundaries">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 12 3 21 6 21 18 12 21 3 18 3 6"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+  <span class="map-label">KUV</span>
+</button>
 <button class="fab" id="mapToggle" title="Switch to satellite" aria-label="Switch to satellite">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
   <span class="map-label" id="mapLabel">TOPO</span>
@@ -225,10 +242,42 @@
   </div>
 </div>
 
+<!-- ===== Stand sheet ===== -->
+<div class="scrim" id="standScrim">
+  <div class="sheet" role="dialog" aria-modal="true">
+    <div class="grip"></div>
+    <h2>Stand</h2>
+    <div class="sub" id="standSub"></div>
+    <div id="standFields"></div>
+    <div class="stand-note">
+      <textarea id="standNote" placeholder="Notes…"></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="closeStand">Close</button>
+      <button class="btn primary" id="saveStand">Save</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 /* ============ Storage (localStorage when hosted, window.storage inside Claude) ============ */
 const KEY = "fieldmark.marks.v1";
+
+/* ============ Stand config ============ */
+// Paste your Worker URL here after deploying worker/
+const PROXY_URL = "";
+const STANDS_KEY = "fwt.stands.v1";
+// Property names from MV_Kuvio — verify against actual WFS response and adjust if needed
+const STAND_FIELDS = [
+  { key:"kehitysluokka", label:"Kehitysluokka", unit:""       },
+  { key:"ika",           label:"Ikä",           unit:"v"      },
+  { key:"ppa",           label:"Ppa",           unit:"m²/ha"  },
+  { key:"pituus",        label:"Pituus",        unit:"m"      },
+  { key:"lpm",           label:"Lpm",           unit:"cm"     },
+  { key:"puulajikoodi",  label:"Pääpuulaji",    unit:""       },
+  { key:"tilavuus",      label:"Kuutimäärä",    unit:"m³/ha"  },
+];
 
 /* ============ Map tile sources ============ */
 // Note: MML_KEY is visible in page source — free tier, read-only tile access only
@@ -274,8 +323,9 @@ const WARN_AT = BUDGET * 0.8;
 
 /* ============ State ============ */
 let marks = [];
-let map, tileLayer, meMarker, meAccuracy, following = true, hasLocated = false;
+let map, tileLayer, standsLayer, meMarker, meAccuracy, following = true, hasLocated = false;
 let currentMapType = "topo";
+let standsVisible = false, standEdits = {}, currentStandId = null, lpTimer = null;
 const layer = { pins: {} };
 let pending = null;   // mark being created: {lat,lng,photos:[],audio:null}
 let viewingId = null;
@@ -315,6 +365,27 @@ function initMap(){
 
   map.on("click", e => openAdd(e.latlng.lat, e.latlng.lng));
   map.on("dragstart", () => { following = false; });
+  map.on("moveend zoomend", scheduleStandLoad);
+
+  // Long-press / right-click → stand lookup
+  map.on("contextmenu", e => { clearTimeout(lpTimer); lpTimer = null; openStandAt(e.latlng); });
+  const con = map.getContainer();
+  con.addEventListener("touchstart", e => {
+    if(e.touches.length !== 1) return;
+    const t = e.touches[0];
+    lpTimer = setTimeout(() => {
+      lpTimer = null;
+      const r = con.getBoundingClientRect();
+      openStandAt(map.containerPointToLatLng(L.point(t.clientX - r.left, t.clientY - r.top)));
+    }, 600);
+  }, {passive:true});
+  con.addEventListener("touchend",  () => { clearTimeout(lpTimer); lpTimer = null; }, {passive:true});
+  con.addEventListener("touchmove", () => { clearTimeout(lpTimer); lpTimer = null; }, {passive:true});
+
+  standsLayer = L.geoJSON(null, {
+    style:{ color:"#5f6b3a", weight:1.5, fillOpacity:.08, fillColor:"#5f6b3a" }
+  }).addTo(map);
+
   locate(true);
 }
 
@@ -328,6 +399,92 @@ function setMapType(type){
   $("mapToggle").title = hint;
   $("mapToggle").setAttribute("aria-label", hint);
 }
+
+/* ============ Stands ============ */
+let standLoadTimer = null;
+function scheduleStandLoad(){
+  clearTimeout(standLoadTimer);
+  standLoadTimer = setTimeout(loadStands, 500);
+}
+
+async function loadStands(){
+  if(!standsVisible){ standsLayer.clearLayers(); return; }
+  if(!PROXY_URL){ return; }
+  if(map.getZoom() < 14){ standsLayer.clearLayers(); return; }
+  const b = map.getBounds();
+  const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()},EPSG:4326`;
+  const url = `${PROXY_URL}?service=WFS&version=2.0.0&request=GetFeature` +
+    `&typeNames=metsaan:MV_Kuvio&bbox=${bbox}&outputFormat=application/json&count=300`;
+  try{
+    const res = await fetch(url);
+    const data = await res.json();
+    standsLayer.clearLayers();
+    standsLayer.addData(data);
+  }catch(e){ console.warn("Stands load failed", e); }
+}
+
+async function openStandAt(latlng){
+  if(!PROXY_URL){ toast("Set PROXY_URL in index.html to enable stand lookup", true); return; }
+  const filter = encodeURIComponent(`INTERSECTS(geom,POINT(${latlng.lng} ${latlng.lat}))`);
+  const url = `${PROXY_URL}?service=WFS&version=2.0.0&request=GetFeature` +
+    `&typeNames=metsaan:MV_Kuvio&CQL_FILTER=${filter}&outputFormat=application/json&count=1`;
+  try{
+    toast("Looking up stand…");
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.features && data.features.length){ showStandSheet(data.features[0]); }
+    else { toast("No stand found here"); }
+  }catch(e){ toast("Stand lookup failed", true); console.warn(e); }
+}
+
+function showStandSheet(feature){
+  const p = feature.properties || {};
+  const id = feature.id || JSON.stringify(p).slice(0,60);
+  currentStandId = id;
+  const saved = standEdits[id] || {};
+
+  $("standSub").textContent = id;
+  const box = $("standFields");
+  box.innerHTML = "";
+  STAND_FIELDS.forEach(f => {
+    const apiVal = p[f.key] ?? "–";
+    const localVal = saved[f.key] !== undefined ? saved[f.key] : String(apiVal);
+    const row = document.createElement("div");
+    row.className = "stand-row";
+    const lbl = document.createElement("span"); lbl.className = "stand-lbl"; lbl.textContent = f.label;
+    const inp = document.createElement("input"); inp.className = "stand-input";
+    inp.dataset.field = f.key; inp.type = "text"; inp.value = localVal;
+    inp.placeholder = String(apiVal);
+    const unit = document.createElement("span"); unit.className = "stand-unit"; unit.textContent = f.unit;
+    row.append(lbl, inp, unit);
+    box.appendChild(row);
+  });
+  $("standNote").value = saved._note || "";
+  $("standScrim").classList.add("open");
+}
+
+$("saveStand").onclick = () => {
+  const saved = {};
+  $("standFields").querySelectorAll(".stand-input").forEach(inp => {
+    saved[inp.dataset.field] = inp.value.trim();
+  });
+  saved._note = $("standNote").value.trim();
+  standEdits[currentStandId] = saved;
+  localStorage.setItem(STANDS_KEY, JSON.stringify(standEdits));
+  $("standScrim").classList.remove("open");
+  toast("Stand saved");
+};
+$("closeStand").onclick = () => $("standScrim").classList.remove("open");
+$("standScrim").addEventListener("click", e => { if(e.target.id === "standScrim") $("standScrim").classList.remove("open"); });
+
+$("standsToggle").onclick = () => {
+  standsVisible = !standsVisible;
+  $("standsToggle").classList.toggle("active", standsVisible);
+  const label = standsVisible ? "Hide stand boundaries" : "Show stand boundaries";
+  $("standsToggle").title = label;
+  $("standsToggle").setAttribute("aria-label", label);
+  if(standsVisible) loadStands(); else standsLayer.clearLayers();
+};
 
 function teardropHTML(m){
   const dots = contentDots(m).map(c=>`<span class="dot ${c}"></span>`).join("");
@@ -617,6 +774,7 @@ if(window.visualViewport){
 (async function(){
   initMap();
   marks = await Store.load();
+  try{ const r = localStorage.getItem(STANDS_KEY); if(r) standEdits = JSON.parse(r); }catch(_){}
   renderAllPins();
   setTimeout(()=>{ $("hint").style.transition="opacity .6s"; $("hint").style.opacity="0"; }, 4000);
   if("serviceWorker" in navigator){
