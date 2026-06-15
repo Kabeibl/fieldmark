@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#b5572f" />
+<title>Fieldmark</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  :root{
+    --paper:#f4ece0; --paper-2:#ece1d0; --ink:#2b2622; --ink-soft:#5c5147;
+    --rust:#b5572f; --rust-deep:#8f4222; --moss:#5f6b3a; --moss-deep:#47521f;
+    --line:#d8cab3; --shadow:rgba(43,38,34,.18);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);
+    font-family:"Spline Sans Mono",ui-monospace,monospace;overscroll-behavior:none;}
+  #map{position:fixed;inset:0;background:var(--paper-2);}
+  .leaflet-container{font-family:"Spline Sans Mono",monospace;background:#dfd2ba;}
+
+  /* ---- top bar ---- */
+  .topbar{position:fixed;top:0;left:0;right:0;z-index:600;display:flex;align-items:center;gap:10px;
+    padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;
+    background:linear-gradient(180deg,rgba(244,236,224,.96),rgba(244,236,224,.0));
+    pointer-events:none;}
+  .brand{pointer-events:auto;display:flex;align-items:baseline;gap:8px;}
+  .brand h1{font-family:"Fraunces",serif;font-weight:600;font-size:22px;letter-spacing:.3px;margin:0;color:var(--ink);}
+  .brand .tag{font-size:11px;color:var(--ink-soft);letter-spacing:.5px;text-transform:uppercase;}
+  .count{margin-left:auto;pointer-events:auto;font-size:12px;color:var(--ink-soft);
+    background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:4px 10px;}
+
+  /* ---- floating buttons ---- */
+  .fab{position:fixed;right:16px;z-index:600;width:52px;height:52px;border-radius:50%;
+    border:1px solid var(--line);background:var(--paper);color:var(--ink);
+    box-shadow:0 4px 14px var(--shadow);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;font-size:22px;}
+  .fab:active{transform:scale(.94);}
+  #recenter{bottom:calc(env(safe-area-inset-bottom) + 92px);}
+  #listBtn{bottom:calc(env(safe-area-inset-bottom) + 24px);}
+  .fab svg{width:24px;height:24px;}
+  #recenter.locating svg{animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .hint{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 28px);transform:translateX(-50%);
+    z-index:590;background:var(--ink);color:var(--paper);font-size:12px;padding:8px 14px;border-radius:20px;
+    box-shadow:0 4px 14px var(--shadow);opacity:.92;max-width:78vw;text-align:center;}
+
+  /* ---- you-are-here dot ---- */
+  .me-dot{width:18px;height:18px;border-radius:50%;background:#2f7fd1;border:3px solid #fff;
+    box-shadow:0 0 0 2px rgba(47,127,209,.5);}
+  .me-pulse{position:relative;}
+  .me-pulse::after{content:"";position:absolute;left:50%;top:50%;width:18px;height:18px;border-radius:50%;
+    transform:translate(-50%,-50%);background:rgba(47,127,209,.35);animation:pulse 2s ease-out infinite;}
+  @keyframes pulse{0%{width:18px;height:18px;opacity:.7;}100%{width:70px;height:70px;opacity:0;}}
+
+  /* ---- teardrop pin ---- */
+  .pin{position:relative;width:30px;height:40px;filter:drop-shadow(0 3px 4px var(--shadow));}
+  .pin svg{width:30px;height:40px;display:block;}
+  .pin .dots{position:absolute;left:0;right:0;top:9px;display:flex;gap:3px;justify-content:center;}
+  .pin .dot{width:6px;height:6px;border-radius:50%;border:1px solid rgba(255,255,255,.7);}
+  .dot.ink{background:var(--ink);} .dot.moss{background:var(--moss);} .dot.rust{background:var(--rust);}
+
+  /* ---- sheet / modal ---- */
+  .scrim{position:fixed;inset:0;z-index:900;background:rgba(43,38,34,.42);
+    display:none;align-items:flex-end;justify-content:center;}
+  .scrim.open{display:flex;}
+  .sheet{width:100%;max-width:560px;background:var(--paper);border-radius:20px 20px 0 0;
+    border-top:1px solid var(--line);box-shadow:0 -8px 30px var(--shadow);
+    padding:18px 18px calc(env(safe-area-inset-bottom) + 18px);max-height:88vh;overflow:auto;
+    animation:rise .22s ease;}
+  @keyframes rise{from{transform:translateY(30px);opacity:.4;}to{transform:none;opacity:1;}}
+  .sheet h2{font-family:"Fraunces",serif;font-weight:600;font-size:20px;margin:2px 0 2px;}
+  .sheet .sub{font-size:11px;color:var(--ink-soft);margin-bottom:14px;letter-spacing:.4px;}
+  .grip{width:40px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 12px;}
+
+  textarea{width:100%;min-height:84px;resize:vertical;font-family:inherit;font-size:15px;color:var(--ink);
+    background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:12px;line-height:1.45;}
+  textarea:focus{outline:none;border-color:var(--rust);}
+
+  .row{display:flex;gap:10px;margin-top:12px;}
+  .chip{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;
+    border:1px solid var(--line);border-radius:12px;background:var(--paper-2);cursor:pointer;font-size:12px;color:var(--ink-soft);}
+  .chip svg{width:22px;height:22px;}
+  .chip.has{border-color:var(--moss);color:var(--moss-deep);background:#eef0e2;}
+  .chip:active{transform:scale(.97);}
+
+  .previews{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;}
+  .previews img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--line);}
+  .thumbwrap{position:relative;}
+  .thumbwrap .x{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;
+    background:var(--rust);color:#fff;border:none;font-size:12px;line-height:1;cursor:pointer;}
+  .audiochip{display:flex;align-items:center;gap:8px;background:#eef0e2;border:1px solid var(--moss);
+    border-radius:10px;padding:8px 10px;font-size:12px;color:var(--moss-deep);}
+
+  .actions{display:flex;gap:10px;margin-top:18px;}
+  .btn{flex:1;border:none;border-radius:12px;padding:14px;font-family:inherit;font-size:14px;font-weight:600;
+    cursor:pointer;letter-spacing:.3px;}
+  .btn:active{transform:scale(.98);}
+  .btn.primary{background:var(--rust);color:#fff;}
+  .btn.ghost{background:var(--paper-2);color:var(--ink);border:1px solid var(--line);}
+  .btn.danger{background:var(--paper-2);color:var(--rust-deep);border:1px solid var(--rust);}
+  .btn[disabled]{opacity:.5;}
+
+  /* view mark */
+  .vnote{font-size:15px;line-height:1.5;white-space:pre-wrap;margin:6px 0 0;}
+  .vmeta{font-size:11px;color:var(--ink-soft);margin-top:10px;letter-spacing:.3px;}
+  .vimgs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .vimgs img{width:100%;max-width:160px;border-radius:10px;border:1px solid var(--line);}
+  audio{width:100%;margin-top:12px;}
+
+  /* recording overlay */
+  .recbar{display:flex;align-items:center;gap:10px;margin-top:12px;background:#f6e7df;border:1px solid var(--rust);
+    border-radius:12px;padding:12px;}
+  .recdot{width:12px;height:12px;border-radius:50%;background:var(--rust);animation:blink 1s steps(2) infinite;}
+  @keyframes blink{50%{opacity:.2;}}
+  .rectime{font-variant-numeric:tabular-nums;font-weight:600;}
+
+  /* list view */
+  .listitem{display:flex;gap:12px;align-items:center;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer;}
+  .listitem:active{background:var(--paper-2);}
+  .li-icons{display:flex;gap:4px;}
+  .li-icons .d{width:8px;height:8px;border-radius:50%;}
+  .li-txt{flex:1;min-width:0;}
+  .li-title{font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .li-sub{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+  .empty{text-align:center;color:var(--ink-soft);font-size:13px;padding:30px 10px;}
+
+  /* toast */
+  .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 90px);transform:translateX(-50%);
+    z-index:1000;background:var(--ink);color:var(--paper);font-size:13px;padding:11px 16px;border-radius:12px;
+    box-shadow:0 6px 18px var(--shadow);max-width:80vw;text-align:center;opacity:0;transition:opacity .2s;pointer-events:none;}
+  .toast.show{opacity:.96;}
+  .toast.warn{background:var(--rust-deep);}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="topbar">
+  <div class="brand"><h1>Fieldmark</h1><span class="tag">field notes</span></div>
+  <div class="count" id="count">0 marks</div>
+</div>
+
+<button class="fab" id="recenter" title="Recenter on me" aria-label="Recenter">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+</button>
+<button class="fab" id="listBtn" title="All marks" aria-label="List">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.2"/><circle cx="3.5" cy="12" r="1.2"/><circle cx="3.5" cy="18" r="1.2"/></svg>
+</button>
+
+<div class="hint" id="hint">Tap the map to drop a mark</div>
+<div class="toast" id="toast"></div>
+
+<!-- ===== Add / Edit sheet ===== -->
+<div class="scrim" id="addScrim">
+  <div class="sheet" role="dialog" aria-modal="true">
+    <div class="grip"></div>
+    <h2 id="addTitle">New mark</h2>
+    <div class="sub" id="addSub"></div>
+    <textarea id="noteText" placeholder="Write a note… (optional)"></textarea>
+
+    <div class="row">
+      <label class="chip" id="photoChip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>Photo</span>
+        <input type="file" id="photoInput" accept="image/*" multiple capture="environment" hidden />
+      </label>
+      <button class="chip" id="audioChip" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></svg>
+        <span id="audioLabel">Record</span>
+      </button>
+    </div>
+
+    <div class="recbar" id="recBar" style="display:none;">
+      <span class="recdot"></span><span>Recording</span>
+      <span class="rectime" id="recTime">0:00</span>
+      <button class="btn primary" id="stopRec" style="flex:0 0 auto;padding:8px 14px;margin:0;">Stop</button>
+    </div>
+
+    <div class="previews" id="previews"></div>
+
+    <div class="actions">
+      <button class="btn ghost" id="cancelAdd">Cancel</button>
+      <button class="btn primary" id="saveAdd">Save mark</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== View sheet ===== -->
+<div class="scrim" id="viewScrim">
+  <div class="sheet" role="dialog" aria-modal="true">
+    <div class="grip"></div>
+    <h2 id="viewTitle">Mark</h2>
+    <div class="sub" id="viewSub"></div>
+    <div id="viewBody"></div>
+    <div class="actions">
+      <button class="btn ghost" id="closeView">Close</button>
+      <button class="btn danger" id="deleteMark">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== List sheet ===== -->
+<div class="scrim" id="listScrim">
+  <div class="sheet" role="dialog" aria-modal="true">
+    <div class="grip"></div>
+    <h2>All marks</h2>
+    <div class="sub" id="listSub"></div>
+    <div id="listBody"></div>
+    <div class="actions"><button class="btn ghost" id="closeList">Close</button></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+/* ============ Storage (localStorage when hosted, window.storage inside Claude) ============ */
+const KEY = "fieldmark.marks.v1";
+const Store = (() => {
+  const hasWin = typeof window.storage !== "undefined" && window.storage
+    && typeof window.storage.getItem === "function";
+  return {
+    async load(){
+      try{
+        const raw = hasWin ? await window.storage.getItem(KEY) : localStorage.getItem(KEY);
+        return raw ? JSON.parse(raw) : [];
+      }catch(e){ console.warn("load failed", e); return []; }
+    },
+    async save(arr){
+      const raw = JSON.stringify(arr);
+      if(hasWin){ await window.storage.setItem(KEY, raw); }
+      else { localStorage.setItem(KEY, raw); }
+      return raw.length;
+    },
+    estimate(arr){ return JSON.stringify(arr).length; }
+  };
+})();
+const BUDGET = 5 * 1024 * 1024;      // ~5MB localStorage budget
+const WARN_AT = BUDGET * 0.8;
+
+/* ============ State ============ */
+let marks = [];
+let map, meMarker, meAccuracy, following = true, hasLocated = false;
+const layer = { pins: {} };
+let pending = null;   // mark being created: {lat,lng,photos:[],audio:null}
+let viewingId = null;
+
+/* ============ Helpers ============ */
+const $ = id => document.getElementById(id);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+function toast(msg, warn){
+  const t = $("toast"); t.textContent = msg; t.className = "toast show" + (warn?" warn":"");
+  clearTimeout(t._t); t._t = setTimeout(()=>{ t.className = "toast"; }, 2600);
+}
+function fmtDate(ts){
+  const d = new Date(ts);
+  return d.toLocaleDateString(undefined,{month:"short",day:"numeric"}) + " · " +
+         d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+}
+function contentDots(m){
+  const dots = [];
+  if(m.text && m.text.trim()) dots.push("ink");
+  if(m.audio) dots.push("moss");
+  if(m.photos && m.photos.length) dots.push("rust");
+  return dots;
+}
+function summary(m){
+  if(m.text && m.text.trim()) return m.text.trim().split("\n")[0];
+  const parts=[];
+  if(m.photos&&m.photos.length) parts.push(m.photos.length+" photo"+(m.photos.length>1?"s":""));
+  if(m.audio) parts.push("voice note");
+  return parts.join(" · ") || "Empty mark";
+}
+
+/* ============ Map ============ */
+function initMap(){
+  map = L.map("map",{zoomControl:false,attributionControl:true}).setView([20,0],2);
+  L.control.zoom({position:"bottomleft"}).addTo(map);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",{
+    maxZoom:20, subdomains:"abcd",
+    attribution:'&copy; OpenStreetMap &copy; CARTO'
+  }).addTo(map);
+
+  map.on("click", e => openAdd(e.latlng.lat, e.latlng.lng));
+  map.on("dragstart", () => { following = false; });
+  locate(true);
+}
+
+function teardropHTML(m){
+  const dots = contentDots(m).map(c=>`<span class="dot ${c}"></span>`).join("");
+  return `<div class="pin">
+    <svg viewBox="0 0 30 40"><path d="M15 0C6.7 0 0 6.7 0 15c0 10.5 15 25 15 25s15-14.5 15-25C30 6.7 23.3 0 15 0z" fill="#f4ece0" stroke="#b5572f" stroke-width="2"/></svg>
+    <div class="dots">${dots}</div>
+  </div>`;
+}
+function addPin(m){
+  const icon = L.divIcon({className:"", html:teardropHTML(m), iconSize:[30,40], iconAnchor:[15,40], popupAnchor:[0,-38]});
+  const mk = L.marker([m.lat,m.lng],{icon}).addTo(map);
+  mk.on("click", ev => { L.DomEvent.stopPropagation(ev); openView(m.id); });
+  layer.pins[m.id] = mk;
+}
+function refreshPin(m){
+  const mk = layer.pins[m.id];
+  if(mk) mk.setIcon(L.divIcon({className:"", html:teardropHTML(m), iconSize:[30,40], iconAnchor:[15,40]}));
+}
+function renderAllPins(){
+  Object.values(layer.pins).forEach(mk=>map.removeLayer(mk));
+  layer.pins = {};
+  marks.forEach(addPin);
+  updateCount();
+}
+function updateCount(){ $("count").textContent = marks.length + (marks.length===1?" mark":" marks"); }
+
+/* ============ Geolocation ============ */
+function locate(initial){
+  if(!navigator.geolocation){ toast("Location not supported here", true); return; }
+  $("recenter").classList.add("locating");
+  navigator.geolocation.getCurrentPosition(pos=>{
+    $("recenter").classList.remove("locating");
+    placeMe(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+    if(initial || following){ map.setView([pos.coords.latitude,pos.coords.longitude], 16); }
+    if(initial) startWatch();
+    hasLocated = true;
+  }, err=>{
+    $("recenter").classList.remove("locating");
+    if(initial){
+      // HTTPS required; fails on file:// or sandbox
+      toast("Can't get location — needs HTTPS. Tap map to add marks.", true);
+    } else {
+      toast("Location unavailable", true);
+    }
+  }, {enableHighAccuracy:true, timeout:10000, maximumAge:5000});
+}
+function startWatch(){
+  navigator.geolocation.watchPosition(pos=>{
+    placeMe(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy);
+    if(following) map.panTo([pos.coords.latitude,pos.coords.longitude],{animate:true});
+  }, ()=>{}, {enableHighAccuracy:true, maximumAge:3000, timeout:15000});
+}
+function placeMe(lat,lng,acc){
+  const ll=[lat,lng];
+  if(!meMarker){
+    meMarker = L.marker(ll,{icon:L.divIcon({className:"me-pulse",html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,zIndexOffset:1000}).addTo(map);
+    meAccuracy = L.circle(ll,{radius:acc||30,color:"#2f7fd1",weight:1,fillColor:"#2f7fd1",fillOpacity:.08}).addTo(map);
+  } else {
+    meMarker.setLatLng(ll); meAccuracy.setLatLng(ll).setRadius(acc||30);
+  }
+}
+$("recenter").onclick = () => {
+  following = true;
+  if(meMarker){ map.flyTo(meMarker.getLatLng(), Math.max(map.getZoom(),16)); }
+  locate(false);
+};
+
+/* ============ Add mark ============ */
+function openAdd(lat,lng){
+  pending = {lat,lng,photos:[],audio:null};
+  $("addTitle").textContent = "New mark";
+  $("addSub").textContent = lat.toFixed(5)+", "+lng.toFixed(5);
+  $("noteText").value = "";
+  $("photoChip").classList.remove("has");
+  $("audioChip").classList.remove("has");
+  $("audioLabel").textContent = "Record";
+  $("recBar").style.display = "none";
+  renderPreviews();
+  $("addScrim").classList.add("open");
+}
+function closeAdd(){ $("addScrim").classList.remove("open"); stopRecording(true); pending=null; }
+$("cancelAdd").onclick = closeAdd;
+$("addScrim").addEventListener("click", e=>{ if(e.target.id==="addScrim") closeAdd(); });
+
+/* photos */
+$("photoInput").addEventListener("change", async e=>{
+  const files = [...e.target.files];
+  for(const f of files){
+    try{ const data = await compressImage(f); pending.photos.push(data); }
+    catch(err){ toast("Couldn't add a photo", true); }
+  }
+  $("photoInput").value = "";
+  if(pending.photos.length) $("photoChip").classList.add("has");
+  renderPreviews();
+  budgetCheck();
+});
+function compressImage(file){
+  return new Promise((res,rej)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      URL.revokeObjectURL(url);
+      const max=1000; let {width:w,height:h}=img;
+      if(w>max||h>max){ const s=Math.min(max/w,max/h); w=Math.round(w*s); h=Math.round(h*s); }
+      const c=document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      res(c.toDataURL("image/jpeg",0.62));
+    };
+    img.onerror = rej; img.src = url;
+  });
+}
+function renderPreviews(){
+  const box=$("previews"); box.innerHTML="";
+  pending.photos.forEach((src,i)=>{
+    const w=document.createElement("div"); w.className="thumbwrap";
+    w.innerHTML=`<img src="${src}"><button class="x" data-i="${i}">×</button>`;
+    box.appendChild(w);
+  });
+  if(pending.audio){
+    const a=document.createElement("div"); a.className="audiochip";
+    a.innerHTML=`<span>🎙 voice note</span><button class="x" data-audio="1" style="position:static;width:18px;height:18px;">×</button>`;
+    box.appendChild(a);
+  }
+}
+$("previews").addEventListener("click", e=>{
+  if(e.target.dataset.i!==undefined){ pending.photos.splice(+e.target.dataset.i,1);
+    if(!pending.photos.length) $("photoChip").classList.remove("has"); renderPreviews(); }
+  if(e.target.dataset.audio){ pending.audio=null; $("audioChip").classList.remove("has");
+    $("audioLabel").textContent="Record"; renderPreviews(); }
+});
+
+/* audio */
+let mediaRec=null, chunks=[], recTimer=null, recStart=0;
+const MAX_AUDIO_MS = 120000; // 2 min
+$("audioChip").onclick = ()=>{ if(mediaRec && mediaRec.state==="recording") stopRecording(); else startRecording(); };
+$("stopRec").onclick = ()=> stopRecording();
+async function startRecording(){
+  if(!navigator.mediaDevices || !window.MediaRecorder){ toast("Recording not supported here", true); return; }
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    mediaRec = new MediaRecorder(stream); chunks=[];
+    mediaRec.ondataavailable = e=>{ if(e.data.size) chunks.push(e.data); };
+    mediaRec.onstop = ()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      const blob = new Blob(chunks,{type: mediaRec.mimeType||"audio/webm"});
+      const r = new FileReader();
+      r.onload = ()=>{ pending.audio = r.result; $("audioChip").classList.add("has");
+        $("audioLabel").textContent="Recorded"; renderPreviews(); budgetCheck(); };
+      r.readAsDataURL(blob);
+    };
+    mediaRec.start(); recStart = Date.now();
+    $("recBar").style.display="flex"; $("audioLabel").textContent="Recording…";
+    recTimer = setInterval(()=>{
+      const ms = Date.now()-recStart;
+      const s = Math.floor(ms/1000);
+      $("recTime").textContent = Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+      if(ms>=MAX_AUDIO_MS){ toast("2 min limit reached"); stopRecording(); }
+    },250);
+  }catch(e){ toast("Mic permission denied", true); }
+}
+function stopRecording(silent){
+  if(recTimer){ clearInterval(recTimer); recTimer=null; }
+  $("recBar").style.display="none";
+  if(mediaRec && mediaRec.state==="recording"){ mediaRec.stop(); }
+  else if(silent && mediaRec){ try{ mediaRec.stream && mediaRec.stream.getTracks().forEach(t=>t.stop()); }catch(_){} }
+}
+
+/* save */
+$("saveAdd").onclick = async ()=>{
+  const text = $("noteText").value.trim();
+  if(!text && !pending.photos.length && !pending.audio){ toast("Add a note, photo, or recording first"); return; }
+  const m = {id:uid(), lat:pending.lat, lng:pending.lng, text, photos:pending.photos, audio:pending.audio, created:Date.now()};
+  marks.push(m);
+  const size = await persist();
+  if(size===false){ marks.pop(); return; }
+  addPin(m); updateCount(); closeAdd();
+  toast("Mark saved");
+};
+
+async function persist(){
+  const size = Store.estimate(marks);
+  if(size > BUDGET){ toast("Storage full — delete a mark or shrink media", true); return false; }
+  try{ await Store.save(marks); }
+  catch(e){ toast("Save failed — storage may be full", true); return false; }
+  if(size > WARN_AT) toast("Storage almost full ("+Math.round(size/1024/1024*10)/10+"MB of 5)", true);
+  return size;
+}
+function budgetCheck(){
+  const size = Store.estimate(marks) + (pending? Store.estimate([pending]) : 0);
+  if(size > WARN_AT) toast("Getting close to storage limit", true);
+}
+
+/* ============ View mark ============ */
+function openView(id){
+  const m = marks.find(x=>x.id===id); if(!m) return;
+  viewingId = id;
+  $("viewTitle").textContent = m.text && m.text.trim() ? "Note" : "Mark";
+  $("viewSub").textContent = fmtDate(m.created) + "  ·  " + m.lat.toFixed(5)+", "+m.lng.toFixed(5);
+  let html = "";
+  if(m.text && m.text.trim()) html += `<div class="vnote">${escapeHTML(m.text)}</div>`;
+  if(m.audio) html += `<audio controls src="${m.audio}"></audio>`;
+  if(m.photos && m.photos.length){ html += `<div class="vimgs">` + m.photos.map(p=>`<img src="${p}">`).join("") + `</div>`; }
+  $("viewBody").innerHTML = html || `<div class="empty">Empty mark</div>`;
+  $("viewScrim").classList.add("open");
+}
+function escapeHTML(s){ return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+$("closeView").onclick = ()=> $("viewScrim").classList.remove("open");
+$("viewScrim").addEventListener("click", e=>{ if(e.target.id==="viewScrim") $("viewScrim").classList.remove("open"); });
+$("deleteMark").onclick = async ()=>{
+  const i = marks.findIndex(x=>x.id===viewingId); if(i<0) return;
+  marks.splice(i,1);
+  if(layer.pins[viewingId]){ map.removeLayer(layer.pins[viewingId]); delete layer.pins[viewingId]; }
+  await persist(); updateCount();
+  $("viewScrim").classList.remove("open");
+  toast("Mark deleted");
+};
+
+/* ============ List view ============ */
+$("listBtn").onclick = ()=>{
+  const body = $("listBody"); body.innerHTML="";
+  $("listSub").textContent = marks.length + " saved";
+  if(!marks.length){ body.innerHTML = `<div class="empty">No marks yet.<br>Tap the map to drop your first one.</div>`; }
+  else{
+    [...marks].sort((a,b)=>b.created-a.created).forEach(m=>{
+      const dots = contentDots(m).map(c=>`<span class="d ${c}" style="background:${c==='ink'?'#2b2622':c==='moss'?'#5f6b3a':'#b5572f'}"></span>`).join("");
+      const el=document.createElement("div"); el.className="listitem"; el.dataset.id=m.id;
+      el.innerHTML = `<div class="li-icons">${dots||'<span class="d" style="background:#d8cab3"></span>'}</div>
+        <div class="li-txt"><div class="li-title">${escapeHTML(summary(m))}</div>
+        <div class="li-sub">${fmtDate(m.created)}</div></div>`;
+      body.appendChild(el);
+    });
+  }
+  $("listScrim").classList.add("open");
+};
+$("listBody").addEventListener("click", e=>{
+  const item = e.target.closest(".listitem"); if(!item) return;
+  const m = marks.find(x=>x.id===item.dataset.id); if(!m) return;
+  $("listScrim").classList.remove("open");
+  map.flyTo([m.lat,m.lng], Math.max(map.getZoom(),16));
+  setTimeout(()=>openView(m.id), 350);
+});
+$("closeList").onclick = ()=> $("listScrim").classList.remove("open");
+$("listScrim").addEventListener("click", e=>{ if(e.target.id==="listScrim") $("listScrim").classList.remove("open"); });
+
+/* ============ Boot ============ */
+(async function(){
+  initMap();
+  marks = await Store.load();
+  renderAllPins();
+  setTimeout(()=>{ $("hint").style.transition="opacity .6s"; $("hint").style.opacity="0"; }, 4000);
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", ()=> navigator.serviceWorker.register("sw.js").catch(()=>{}));
+  }
+})();
+</script>
+</body>
+</html>
