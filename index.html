@@ -55,6 +55,10 @@
   #standsToggle svg{width:20px;height:20px;}
   #standsToggle .map-label{font-size:8px;font-weight:600;letter-spacing:.6px;line-height:1;}
   #standsToggle.active{background:var(--moss);color:#fff;border-color:var(--moss-deep);}
+  .fab-badge{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;border-radius:8px;
+    background:var(--rust);color:#fff;font-size:9px;font-weight:700;line-height:1;
+    display:flex;align-items:center;justify-content:center;padding:0 3px;
+    border:2px solid var(--paper);}
 
   /* ---- stand sheet ---- */
   .stand-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);}
@@ -189,9 +193,10 @@
 <button class="fab" id="recenter" title="Keskitä sijaintiin" aria-label="Keskitä sijaintiin">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
 </button>
-<button class="fab" id="standsToggle" title="Näytä kuviorajat" aria-label="Näytä kuviorajat">
+<button class="fab" id="standsToggle" title="Piilota kuviorajat" aria-label="Piilota kuviorajat">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 12 3 21 6 21 18 12 21 3 18 3 6"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
   <span class="map-label">KUV</span>
+  <span class="fab-badge" id="standsBadge" style="display:none"></span>
 </button>
 <button class="fab" id="mapToggle" title="Vaihda: satelliitti" aria-label="Vaihda: satelliitti">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
@@ -277,6 +282,7 @@
     </div>
     <div class="actions">
       <button class="btn ghost" id="closeStand" data-i18n="close">Sulje</button>
+      <button class="btn danger" id="revertStand" data-i18n="revert" style="display:none">Palauta</button>
       <button class="btn primary" id="saveStand" data-i18n="save">Tallenna</button>
     </div>
   </div>
@@ -334,6 +340,8 @@ const LANGS = {
     toast_no_stand:  "Kuviota ei löydy tästä",
     toast_stand_err: "Kuvion haku epäonnistui",
     toast_stand_ok:  "Kuvio tallennettu",
+    toast_stand_rev: "Muutokset palautettu",
+    revert:          "Palauta",
     toast_loc_no:    "Sijainti ei ole tuettu",
     toast_loc_https: "Sijaintia ei saada – tarvitaan HTTPS. Napauta karttaa lisätäksesi merkintöjä.",
     toast_loc_err:   "Sijainti ei ole saatavilla",
@@ -402,6 +410,8 @@ const LANGS = {
     toast_no_stand:  "No stand found here",
     toast_stand_err: "Stand lookup failed",
     toast_stand_ok:  "Stand saved",
+    toast_stand_rev: "Changes reverted",
+    revert:          "Revert",
     toast_loc_no:    "Location not supported here",
     toast_loc_https: "Can't get location — needs HTTPS. Tap map to add marks.",
     toast_loc_err:   "Location unavailable",
@@ -444,6 +454,7 @@ function applyLang(){
   $("listBtn").title = tr("all_marks"); $("listBtn").setAttribute("aria-label", tr("all_marks"));
   const sLabel = tr(standsVisible ? "stands_hide" : "stands_show");
   $("standsToggle").title = sLabel; $("standsToggle").setAttribute("aria-label", sLabel);
+  $("standsToggle").classList.toggle("active", standsVisible);
   updateMapToggleLabel();
   updateCount();
   const audioState = mediaRec && mediaRec.state === "recording" ? "recording"
@@ -497,7 +508,7 @@ const WARN_AT = BUDGET * 0.8;
 let marks = [];
 let map, tileLayer, standsLayer, standLabels, meMarker, meAccuracy, following = true, hasLocated = false;
 let currentMapType = "topo";
-let standsVisible = false, standEdits = {}, currentStandId = null, currentStandLL = null, lpTimer = null;
+let standsVisible = true, standEdits = {}, currentStandId = null, currentStandLL = null, lpTimer = null;
 const layer = { pins: {} };
 let pending = null;   // mark being created: {lat,lng,photos:[],audio:null}
 let viewingId = null;
@@ -674,6 +685,7 @@ function showStandSheet(feature){
   const saved = standEdits[id] || {};
 
   $("standSub").textContent = id;
+  $("revertStand").style.display = standEdits[id] ? "" : "none";
   const box = $("standFields");
   box.innerHTML = "";
   LANGS[lang].stand_fields.forEach(f => {
@@ -714,8 +726,16 @@ $("saveStand").onclick = () => {
   if(currentStandLL) saved._ll = currentStandLL;
   standEdits[currentStandId] = saved;
   localStorage.setItem(STANDS_KEY, JSON.stringify(standEdits));
+  updateStandsBadge();
   $("standScrim").classList.remove("open");
   toast(tr("toast_stand_ok"));
+};
+$("revertStand").onclick = () => {
+  delete standEdits[currentStandId];
+  localStorage.setItem(STANDS_KEY, JSON.stringify(standEdits));
+  updateStandsBadge();
+  $("standScrim").classList.remove("open");
+  toast(tr("toast_stand_rev"));
 };
 $("closeStand").onclick = () => $("standScrim").classList.remove("open");
 $("standScrim").addEventListener("click", e => { if(e.target.id === "standScrim") $("standScrim").classList.remove("open"); });
@@ -754,6 +774,11 @@ function renderAllPins(){
 }
 function updateCount(){ $("count").textContent = tr("count_marks", marks.length); }
 $("count").onclick = () => $("listBtn").click();
+function updateStandsBadge(){
+  const n = Object.keys(standEdits).length;
+  const b = $("standsBadge");
+  b.textContent = n; b.style.display = n ? "flex" : "none";
+}
 
 /* ============ Geolocation ============ */
 function locate(initial){
@@ -1086,6 +1111,7 @@ if(window.visualViewport){
   try{ const r = localStorage.getItem(STANDS_KEY); if(r) standEdits = JSON.parse(r); }catch(_){}
   renderAllPins();
   applyLang();
+  updateStandsBadge();
   setTimeout(()=>{ $("hint").style.transition="opacity .6s"; $("hint").style.opacity="0"; }, 4000);
   if("serviceWorker" in navigator){
     window.addEventListener("load", ()=> navigator.serviceWorker.register("sw.js").catch(()=>{}));
