@@ -75,6 +75,11 @@
     z-index:590;background:var(--ink);color:var(--paper);font-size:12px;padding:8px 14px;border-radius:20px;
     box-shadow:0 4px 14px var(--shadow);opacity:.92;max-width:78vw;text-align:center;}
 
+  /* ---- stand highlight ring ---- */
+  .stand-ring{width:24px;height:24px;border-radius:50%;border:3px solid var(--moss);
+    animation:stand-ring 1.3s ease-out 0s 3 forwards;}
+  @keyframes stand-ring{0%{transform:scale(1);opacity:1;}100%{transform:scale(7);opacity:0;}}
+
   /* ---- you-are-here dot ---- */
   .me-dot{width:18px;height:18px;border-radius:50%;background:#2f7fd1;border:3px solid #fff;
     box-shadow:0 0 0 2px rgba(47,127,209,.5);}
@@ -484,7 +489,7 @@ const WARN_AT = BUDGET * 0.8;
 let marks = [];
 let map, tileLayer, standsLayer, meMarker, meAccuracy, following = true, hasLocated = false;
 let currentMapType = "topo";
-let standsVisible = false, standEdits = {}, currentStandId = null, lpTimer = null;
+let standsVisible = false, standEdits = {}, currentStandId = null, currentStandLL = null, lpTimer = null;
 const layer = { pins: {} };
 let pending = null;   // mark being created: {lat,lng,photos:[],audio:null}
 let viewingId = null;
@@ -601,10 +606,20 @@ async function openStandAt(latlng){
   }catch(e){ toast(tr("toast_stand_err"), true); console.warn(e); }
 }
 
+function geomCentroid(geom){
+  if(!geom) return null;
+  const ring = geom.type === "Polygon" ? geom.coordinates[0]
+             : geom.type === "MultiPolygon" ? geom.coordinates[0][0] : null;
+  if(!ring || !ring.length) return null;
+  const n = ring.length;
+  return { lat: ring.reduce((s,c)=>s+c[1],0)/n, lng: ring.reduce((s,c)=>s+c[0],0)/n };
+}
+
 function showStandSheet(feature){
   const p = feature.properties || {};
   const id = feature.id || JSON.stringify(p).slice(0,60);
   currentStandId = id;
+  currentStandLL = geomCentroid(feature.geometry) || (standEdits[id] && standEdits[id]._ll) || null;
   const saved = standEdits[id] || {};
 
   $("standSub").textContent = id;
@@ -645,6 +660,7 @@ $("saveStand").onclick = () => {
     saved[inp.dataset.field] = inp.value.trim();
   });
   saved._note = $("standNote").value.trim();
+  if(currentStandLL) saved._ll = currentStandLL;
   standEdits[currentStandId] = saved;
   localStorage.setItem(STANDS_KEY, JSON.stringify(standEdits));
   $("standScrim").classList.remove("open");
@@ -910,7 +926,28 @@ function openStandFromList(id){
   const saved = standEdits[id]; if(!saved) return;
   const p = {};
   LANGS[lang].stand_fields.forEach(f => { p[f.key] = saved[f.key] !== undefined ? saved[f.key] : "–"; });
-  showStandSheet({ id, properties: p });
+  const ll = saved._ll;
+
+  if(ll){
+    // Ensure stands overlay is on so the polygon is visible
+    if(!standsVisible){
+      standsVisible = true;
+      $("standsToggle").classList.add("active");
+      const label = tr("stands_hide");
+      $("standsToggle").title = label; $("standsToggle").setAttribute("aria-label", label);
+    }
+    map.flyTo([ll.lat, ll.lng], Math.max(map.getZoom(), 15));
+
+    // Pulse ring at centroid
+    const ring = L.divIcon({ className:"", html:'<div class="stand-ring"></div>', iconSize:[24,24], iconAnchor:[12,12] });
+    const ping = L.marker([ll.lat, ll.lng], { icon:ring, interactive:false }).addTo(map);
+    setTimeout(() => map.removeLayer(ping), 4000);
+
+    // Open sheet after fly settles
+    setTimeout(() => showStandSheet({ id, properties: p }), 900);
+  } else {
+    showStandSheet({ id, properties: p });
+  }
 }
 
 $("listBtn").onclick = ()=>{
