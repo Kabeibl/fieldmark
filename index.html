@@ -80,6 +80,13 @@
     animation:stand-ring 1.3s ease-out 0s 3 forwards;}
   @keyframes stand-ring{0%{transform:scale(1);opacity:1;}100%{transform:scale(7);opacity:0;}}
 
+  /* ---- stand number label on map ---- */
+  .leaflet-tooltip.stand-label{background:transparent;border:none;box-shadow:none;
+    color:var(--moss-deep);font-size:10px;font-weight:700;
+    font-family:"Spline Sans Mono",monospace;padding:0;white-space:nowrap;
+    text-shadow:0 0 3px var(--paper),0 0 3px var(--paper),0 0 6px var(--paper);}
+  .leaflet-tooltip.stand-label::before{display:none;}
+
   /* ---- you-are-here dot ---- */
   .me-dot{width:18px;height:18px;border-radius:50%;background:#2f7fd1;border:3px solid #fff;
     box-shadow:0 0 0 2px rgba(47,127,209,.5);}
@@ -347,6 +354,7 @@ const LANGS = {
     section_stands:  "Kuviot",
     stand_fields: [
       { key:"DEVELOPMENTCLASS", label:"Kehitysluokka", unit:""      },
+      { key:"AREA",             label:"Pinta-ala",     unit:"ha"    },
       { key:"MEANAGE",          label:"Ikä",           unit:"v"     },
       { key:"BASALAREA",        label:"Ppa",           unit:"m²/ha" },
       { key:"MEANHEIGHT",       label:"Pituus",        unit:"m"     },
@@ -414,6 +422,7 @@ const LANGS = {
     section_stands:  "Stands",
     stand_fields: [
       { key:"DEVELOPMENTCLASS", label:"Development class",  unit:""      },
+      { key:"AREA",             label:"Area",               unit:"ha"    },
       { key:"MEANAGE",          label:"Age",                unit:"yr"    },
       { key:"BASALAREA",        label:"Basal area",         unit:"m²/ha" },
       { key:"MEANHEIGHT",       label:"Height",             unit:"m"     },
@@ -547,7 +556,13 @@ function initMap(){
   con.addEventListener("touchmove", () => { clearTimeout(lpTimer); lpTimer = null; }, {passive:true});
 
   standsLayer = L.geoJSON(null, {
-    style:{ color:"#5f6b3a", weight:1.5, fillOpacity:.08, fillColor:"#5f6b3a" }
+    style:{ color:"#5f6b3a", weight:1.5, fillOpacity:.08, fillColor:"#5f6b3a" },
+    onEachFeature(feature, lyr){
+      const num = feature.properties && feature.properties.STANDNUMBER;
+      if(num != null){
+        lyr.bindTooltip(String(num), { permanent:true, direction:"center", className:"stand-label" });
+      }
+    }
   }).addTo(map);
 
   locate(true);
