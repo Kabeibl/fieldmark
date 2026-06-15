@@ -294,7 +294,7 @@ function initMap(){
 function teardropHTML(m){
   const dots = contentDots(m).map(c=>`<span class="dot ${c}"></span>`).join("");
   return `<div class="pin">
-    <svg viewBox="0 0 30 40"><path d="M15 0C6.7 0 0 6.7 0 15c0 10.5 15 25 15 25s15-14.5 15-25C30 6.7 23.3 0 15 0z" fill="#f4ece0" stroke="#b5572f" stroke-width="2"/></svg>
+    <svg viewBox="0 0 30 40" overflow="visible"><path d="M15 0C6.7 0 0 6.7 0 15c0 10.5 15 25 15 25s15-14.5 15-25C30 6.7 23.3 0 15 0z" fill="#f4ece0" stroke="#b5572f" stroke-width="2"/></svg>
     <div class="dots">${dots}</div>
   </div>`;
 }
