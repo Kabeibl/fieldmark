@@ -1,6 +1,6 @@
-# Fieldmark
+# Tatti — Forest Talk & Walk
 
-A lightweight, offline-first field notes PWA. Tap anywhere on a map to drop a mark — attach a text note, photos, and a voice recording. Runs entirely in the browser with no backend.
+A lightweight, offline-first nature notes PWA. Tap anywhere on a map to drop a mark — attach a text note, photos, and a voice recording. Runs entirely in the browser with no backend.
 
 **Live app:** https://kabeibl.github.io/fieldmark/
 
@@ -56,7 +56,7 @@ git push
 When you edit `index.html` or any cached asset, bump the cache version in `sw.js` so installed copies update:
 
 ```js
-const CACHE = "fieldmark-v3";  // increment each release
+const CACHE = "tatti-v1";  // increment each release: tatti-v2, tatti-v3, …
 ```
 
 See [DEPLOY.md](DEPLOY.md) for the full guide.

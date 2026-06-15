@@ -1,4 +1,4 @@
-# Fieldmark — deploy & version control
+# Tatti (Forest Talk & Walk) — deploy & version control
 
 A single-file map note-taking PWA. These files are the whole app — no build step.
 
@@ -84,7 +84,7 @@ Open **https://kabeibl.github.io/fieldmark/** on your phone.
 The service worker caches the app for offline use. **Whenever you edit `index.html`** (or any asset), bump the cache version in `sw.js`:
 
 ```js
-const CACHE = "fieldmark-v1";   // -> "fieldmark-v2", then v3, ...
+const CACHE = "tatti-v1";   // -> "tatti-v2", then v3, ...
 ```
 
 Otherwise installed copies keep serving the old cached version. Commit, push, and reload — the new worker activates and clears the old cache.

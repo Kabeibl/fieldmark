@@ -1,7 +1,7 @@
 {
-  "name": "Fieldmark",
-  "short_name": "Fieldmark",
-  "description": "Tap a map to drop a mark — attach a note, photos, and a voice recording.",
+  "name": "Forest Talk & Walk",
+  "short_name": "Tatti",
+  "description": "Tap the map to drop a mark — attach a note, photos, and a voice recording.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
