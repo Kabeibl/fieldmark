@@ -42,6 +42,8 @@
   .fab:active{transform:scale(.94);}
   #recenter{bottom:calc(env(safe-area-inset-bottom) + 92px);}
   #listBtn{bottom:calc(env(safe-area-inset-bottom) + 24px);}
+  #mapToggle{bottom:calc(env(safe-area-inset-bottom) + 160px);}
+  #mapToggle.satellite svg{stroke:var(--rust);}
   .fab svg{width:24px;height:24px;}
   #recenter.locating svg{animation:spin 1s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
@@ -149,6 +151,9 @@
 <button class="fab" id="recenter" title="Recenter on me" aria-label="Recenter">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
 </button>
+<button class="fab" id="mapToggle" title="Switch to satellite" aria-label="Switch to satellite">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+</button>
 <button class="fab" id="listBtn" title="All marks" aria-label="List">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.2"/><circle cx="3.5" cy="12" r="1.2"/><circle cx="3.5" cy="18" r="1.2"/></svg>
 </button>
@@ -221,6 +226,20 @@
 <script>
 /* ============ Storage (localStorage when hosted, window.storage inside Claude) ============ */
 const KEY = "fieldmark.marks.v1";
+
+/* ============ Map tile sources ============ */
+// Free MML API key: https://www.maanmittauslaitos.fi/en/rajapinnat/api-avaimen-ohje
+const MML_KEY = "";
+const TILE_CONFIGS = {
+  maastokartta: {
+    url: `https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/maastokartta/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.png?api-key=${MML_KEY}`,
+    opts: { maxZoom:19, maxNativeZoom:15, attribution:'&copy; <a href="https://www.maanmittauslaitos.fi">Maanmittauslaitos</a>' }
+  },
+  satellite: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    opts: { maxZoom:20, attribution:'&copy; Esri &mdash; Source: Esri, DigitalGlobe, GeoEye, Earthstar Geographics' }
+  }
+};
 const Store = (() => {
   const hasWin = typeof window.storage !== "undefined" && window.storage
     && typeof window.storage.getItem === "function";
@@ -245,7 +264,8 @@ const WARN_AT = BUDGET * 0.8;
 
 /* ============ State ============ */
 let marks = [];
-let map, meMarker, meAccuracy, following = true, hasLocated = false;
+let map, tileLayer, meMarker, meAccuracy, following = true, hasLocated = false;
+let currentMapType = "maastokartta";
 const layer = { pins: {} };
 let pending = null;   // mark being created: {lat,lng,photos:[],audio:null}
 let viewingId = null;
@@ -281,14 +301,23 @@ function summary(m){
 function initMap(){
   map = L.map("map",{zoomControl:false,attributionControl:true}).setView([20,0],2);
   L.control.zoom({position:"bottomleft"}).addTo(map);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",{
-    maxZoom:20, subdomains:"abcd",
-    attribution:'&copy; OpenStreetMap &copy; CARTO'
-  }).addTo(map);
+  setMapType("maastokartta");
 
   map.on("click", e => openAdd(e.latlng.lat, e.latlng.lng));
   map.on("dragstart", () => { following = false; });
   locate(true);
+}
+
+function setMapType(type){
+  if(tileLayer) map.removeLayer(tileLayer);
+  const cfg = TILE_CONFIGS[type];
+  tileLayer = L.tileLayer(cfg.url, cfg.opts).addTo(map);
+  currentMapType = type;
+  const next = type === "maastokartta" ? "satellite" : "maastokartta";
+  const label = next === "satellite" ? "Switch to satellite" : "Switch to terrain map";
+  $("mapToggle").title = label;
+  $("mapToggle").setAttribute("aria-label", label);
+  $("mapToggle").classList.toggle("satellite", type === "satellite");
 }
 
 function teardropHTML(m){
@@ -351,6 +380,8 @@ function placeMe(lat,lng,acc){
     meMarker.setLatLng(ll); meAccuracy.setLatLng(ll).setRadius(acc||30);
   }
 }
+$("mapToggle").onclick = () => setMapType(currentMapType === "maastokartta" ? "satellite" : "maastokartta");
+
 $("recenter").onclick = () => {
   following = true;
   if(meMarker){ map.flyTo(meMarker.getLatLng(), Math.max(map.getZoom(),16)); }
