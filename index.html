@@ -145,6 +145,9 @@
   .rectime{font-variant-numeric:tabular-nums;font-weight:600;}
 
   /* list view */
+  .list-section{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;
+    color:var(--ink-soft);padding:16px 4px 6px;border-top:2px solid var(--line);margin-top:6px;}
+  .list-section:first-child{border-top:none;padding-top:0;}
   .listitem{display:flex;gap:12px;align-items:center;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer;}
   .listitem:active{background:var(--paper-2);}
   .li-icons{display:flex;gap:4px;}
@@ -334,6 +337,8 @@ const LANGS = {
     toast_mark_ok:   "Merkintä tallennettu",
     toast_mark_upd:  "Merkintä päivitetty",
     toast_mark_del:  "Merkintä poistettu",
+    section_marks:   "Merkinnät",
+    section_stands:  "Kuviot",
     stand_fields: [
       { key:"DEVELOPMENTCLASS", label:"Kehitysluokka", unit:""      },
       { key:"MEANAGE",          label:"Ikä",           unit:"v"     },
@@ -399,6 +404,8 @@ const LANGS = {
     toast_mark_ok:   "Mark saved",
     toast_mark_upd:  "Mark updated",
     toast_mark_del:  "Mark deleted",
+    section_marks:   "Marks",
+    section_stands:  "Stands",
     stand_fields: [
       { key:"DEVELOPMENTCLASS", label:"Development class",  unit:""      },
       { key:"MEANAGE",          label:"Age",                unit:"yr"    },
@@ -897,24 +904,66 @@ $("deleteMark").onclick = async ()=>{
 };
 
 /* ============ List view ============ */
+function openStandFromList(id){
+  const saved = standEdits[id]; if(!saved) return;
+  const p = {};
+  LANGS[lang].stand_fields.forEach(f => { p[f.key] = saved[f.key] !== undefined ? saved[f.key] : "–"; });
+  showStandSheet({ id, properties: p });
+}
+
 $("listBtn").onclick = ()=>{
   const body = $("listBody"); body.innerHTML="";
   $("listSub").textContent = tr("n_saved", marks.length);
-  if(!marks.length){ body.innerHTML = `<div class="empty">${tr("no_marks")}</div>`; }
-  else{
-    [...marks].sort((a,b)=>b.created-a.created).forEach(m=>{
-      const dots = contentDots(m).map(c=>`<span class="d ${c}" style="background:${c==='ink'?'#2b2622':c==='moss'?'#5f6b3a':'#b5572f'}"></span>`).join("");
-      const el=document.createElement("div"); el.className="listitem"; el.dataset.id=m.id;
-      el.innerHTML = `<div class="li-icons">${dots||'<span class="d" style="background:#d8cab3"></span>'}</div>
-        <div class="li-txt"><div class="li-title">${escapeHTML(summary(m))}</div>
-        <div class="li-sub">${fmtDate(m.created)}</div></div>`;
-      body.appendChild(el);
-    });
+
+  const standIds = Object.keys(standEdits);
+  const hasMarks = marks.length > 0;
+  const hasStands = standIds.length > 0;
+
+  if(hasMarks || hasStands){
+    if(hasMarks){
+      if(hasStands){
+        const hdr = document.createElement("div"); hdr.className = "list-section";
+        hdr.textContent = tr("section_marks"); body.appendChild(hdr);
+      }
+      [...marks].sort((a,b)=>b.created-a.created).forEach(m=>{
+        const dots = contentDots(m).map(c=>`<span class="d ${c}" style="background:${c==='ink'?'#2b2622':c==='moss'?'#5f6b3a':'#b5572f'}"></span>`).join("");
+        const el=document.createElement("div"); el.className="listitem"; el.dataset.id=m.id;
+        el.innerHTML = `<div class="li-icons">${dots||'<span class="d" style="background:#d8cab3"></span>'}</div>
+          <div class="li-txt"><div class="li-title">${escapeHTML(summary(m))}</div>
+          <div class="li-sub">${fmtDate(m.created)}</div></div>`;
+        body.appendChild(el);
+      });
+    }
+
+    if(hasStands){
+      const hdr = document.createElement("div"); hdr.className = "list-section";
+      hdr.textContent = tr("section_stands"); body.appendChild(hdr);
+      standIds.forEach(id => {
+        const saved = standEdits[id];
+        const note = (saved._note || "").trim();
+        const shortId = id.replace(/^stand\./, "");
+        const title = note ? note.split("\n")[0] : shortId;
+        const sub = note ? shortId : "";
+        const el = document.createElement("div"); el.className="listitem"; el.dataset.standId=id;
+        el.innerHTML = `<div class="li-icons"><span class="d" style="background:var(--moss)"></span></div>
+          <div class="li-txt"><div class="li-title">${escapeHTML(title)}</div>
+          ${sub ? `<div class="li-sub">${escapeHTML(sub)}</div>` : ""}</div>`;
+        body.appendChild(el);
+      });
+    }
+  } else {
+    body.innerHTML = `<div class="empty">${tr("no_marks")}</div>`;
   }
+
   $("listScrim").classList.add("open");
 };
 $("listBody").addEventListener("click", e=>{
   const item = e.target.closest(".listitem"); if(!item) return;
+  if(item.dataset.standId){
+    $("listScrim").classList.remove("open");
+    openStandFromList(item.dataset.standId);
+    return;
+  }
   const m = marks.find(x=>x.id===item.dataset.id); if(!m) return;
   $("listScrim").classList.remove("open");
   map.flyTo([m.lat,m.lng], Math.max(map.getZoom(),16));
