@@ -266,17 +266,16 @@ const KEY = "fieldmark.marks.v1";
 
 /* ============ Stand config ============ */
 // Paste your Worker URL here after deploying worker/
-const PROXY_URL = "";
+const PROXY_URL = "https://fwt-wfs-proxy.abel-onditi.workers.dev";
 const STANDS_KEY = "fwt.stands.v1";
-// Property names from MV_Kuvio — verify against actual WFS response and adjust if needed
 const STAND_FIELDS = [
-  { key:"kehitysluokka", label:"Kehitysluokka", unit:""       },
-  { key:"ika",           label:"Ikä",           unit:"v"      },
-  { key:"ppa",           label:"Ppa",           unit:"m²/ha"  },
-  { key:"pituus",        label:"Pituus",        unit:"m"      },
-  { key:"lpm",           label:"Lpm",           unit:"cm"     },
-  { key:"puulajikoodi",  label:"Pääpuulaji",    unit:""       },
-  { key:"tilavuus",      label:"Kuutimäärä",    unit:"m³/ha"  },
+  { key:"DEVELOPMENTCLASS", label:"Kehitysluokka", unit:""       },
+  { key:"MEANAGE",          label:"Ikä",           unit:"v"      },
+  { key:"BASALAREA",        label:"Ppa",           unit:"m²/ha"  },
+  { key:"MEANHEIGHT",       label:"Pituus",        unit:"m"      },
+  { key:"MEANDIAMETER",     label:"Lpm",           unit:"cm"     },
+  { key:"MAINTREESPECIES",  label:"Pääpuulaji",    unit:""       },
+  { key:"VOLUME",           label:"Kuutimäärä",    unit:"m³/ha"  },
 ];
 
 /* ============ Map tile sources ============ */
@@ -414,7 +413,7 @@ async function loadStands(){
   const b = map.getBounds();
   const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()},EPSG:4326`;
   const url = `${PROXY_URL}?service=WFS&version=2.0.0&request=GetFeature` +
-    `&typeNames=metsaan:MV_Kuvio&bbox=${bbox}&outputFormat=application/json&count=300`;
+    `&typeNames=v1:stand&bbox=${bbox}&outputFormat=application/json&srsName=CRS:84&count=300`;
   try{
     const res = await fetch(url);
     const data = await res.json();
@@ -425,9 +424,9 @@ async function loadStands(){
 
 async function openStandAt(latlng){
   if(!PROXY_URL){ toast("Set PROXY_URL in index.html to enable stand lookup", true); return; }
-  const filter = encodeURIComponent(`INTERSECTS(geom,POINT(${latlng.lng} ${latlng.lat}))`);
+  const filter = encodeURIComponent(`INTERSECTS(GEOMETRY,POINT(${latlng.lng} ${latlng.lat}))`);
   const url = `${PROXY_URL}?service=WFS&version=2.0.0&request=GetFeature` +
-    `&typeNames=metsaan:MV_Kuvio&CQL_FILTER=${filter}&outputFormat=application/json&count=1`;
+    `&typeNames=v1:stand&CQL_FILTER=${filter}&outputFormat=application/json&srsName=CRS:84&count=1`;
   try{
     toast("Looking up stand…");
     const res = await fetch(url);

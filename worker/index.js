@@ -2,7 +2,7 @@
 // Deploy: wrangler deploy  (from this directory)
 // Then paste the worker URL into PROXY_URL in index.html
 
-const WFS_BASE = "https://kartta.metsakeskus.fi/geoserver/metsaan/wfs";
+const WFS_BASE = "https://avoin.metsakeskus.fi/rajapinnat/v1/stand/ows";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
