@@ -228,16 +228,14 @@
 const KEY = "fieldmark.marks.v1";
 
 /* ============ Map tile sources ============ */
-// Free MML API key: https://www.maanmittauslaitos.fi/en/rajapinnat/api-avaimen-ohje
-const MML_KEY = "";
 const TILE_CONFIGS = {
   maastokartta: {
-    url: `https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/maastokartta/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.png?api-key=${MML_KEY}`,
-    opts: { maxZoom:19, maxNativeZoom:15, attribution:'&copy; <a href="https://www.maanmittauslaitos.fi">Maanmittauslaitos</a>' }
+    url: "https://tiles.kartat.kapsi.fi/maastokartta/{z}/{x}/{y}.jpg",
+    opts: { maxZoom:19, maxNativeZoom:16, attribution:'&copy; <a href="https://www.maanmittauslaitos.fi">Maanmittauslaitos</a> / <a href="https://www.kapsi.fi">Kapsi</a>' }
   },
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    opts: { maxZoom:20, attribution:'&copy; Esri &mdash; Source: Esri, DigitalGlobe, GeoEye, Earthstar Geographics' }
+    opts: { maxZoom:20, attribution:'&copy; Esri, DigitalGlobe, GeoEye, Earthstar Geographics' }
   }
 };
 const Store = (() => {
