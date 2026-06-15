@@ -1,6 +1,6 @@
 {
-  "name": "Forest Talk & Walk",
-  "short_name": "Tatti",
+  "name": "Forest Walk & Talk",
+  "short_name": "Forest Walk & Talk",
   "description": "Tap the map to drop a mark — attach a note, photos, and a voice recording.",
   "start_url": "./index.html",
   "scope": "./",
