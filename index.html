@@ -342,6 +342,8 @@ const LANGS = {
     toast_stand_ok:  "Kuvio tallennettu",
     toast_stand_rev: "Muutokset palautettu",
     revert:          "Palauta",
+    confirm_delete:  "Poista?",
+    confirm_revert:  "Palauta?",
     toast_loc_no:    "Sijainti ei ole tuettu",
     toast_loc_https: "Sijaintia ei saada – tarvitaan HTTPS. Napauta karttaa lisätäksesi merkintöjä.",
     toast_loc_err:   "Sijainti ei ole saatavilla",
@@ -412,6 +414,8 @@ const LANGS = {
     toast_stand_ok:  "Stand saved",
     toast_stand_rev: "Changes reverted",
     revert:          "Revert",
+    confirm_delete:  "Delete?",
+    confirm_revert:  "Revert?",
     toast_loc_no:    "Location not supported here",
     toast_loc_https: "Can't get location — needs HTTPS. Tap map to add marks.",
     toast_loc_err:   "Location unavailable",
@@ -686,6 +690,7 @@ function showStandSheet(feature){
 
   $("standSub").textContent = id;
   $("revertStand").style.display = standEdits[id] ? "" : "none";
+  resetConfirm($("revertStand"), "revert");
   const box = $("standFields");
   box.innerHTML = "";
   LANGS[lang].stand_fields.forEach(f => {
@@ -730,13 +735,22 @@ $("saveStand").onclick = () => {
   $("standScrim").classList.remove("open");
   toast(tr("toast_stand_ok"));
 };
-$("revertStand").onclick = () => {
+function armConfirm(btn, confirmKey, action){
+  if(btn.dataset.armed === "1"){ clearTimeout(btn._ct); btn.dataset.armed = ""; action(); return; }
+  btn.dataset.armed = "1";
+  const orig = btn.textContent;
+  btn.textContent = tr(confirmKey);
+  btn._ct = setTimeout(() => { btn.dataset.armed = ""; btn.textContent = orig; }, 3000);
+}
+function resetConfirm(btn, key){ clearTimeout(btn._ct); btn.dataset.armed = ""; btn.textContent = tr(key); }
+
+$("revertStand").onclick = () => armConfirm($("revertStand"), "confirm_revert", () => {
   delete standEdits[currentStandId];
   localStorage.setItem(STANDS_KEY, JSON.stringify(standEdits));
   updateStandsBadge();
   $("standScrim").classList.remove("open");
   toast(tr("toast_stand_rev"));
-};
+});
 $("closeStand").onclick = () => $("standScrim").classList.remove("open");
 $("standScrim").addEventListener("click", e => { if(e.target.id === "standScrim") $("standScrim").classList.remove("open"); });
 
@@ -982,20 +996,21 @@ function openView(id){
   if(m.audio) html += `<audio controls src="${m.audio}"></audio>`;
   if(m.photos && m.photos.length){ html += `<div class="vimgs">` + m.photos.map(p=>`<img src="${p}">`).join("") + `</div>`; }
   $("viewBody").innerHTML = html || `<div class="empty">${tr("empty_mark")}</div>`;
+  resetConfirm($("deleteMark"), "delete");
   $("viewScrim").classList.add("open");
 }
 function escapeHTML(s){ return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 $("editMark").onclick = ()=>{ const id = viewingId; $("viewScrim").classList.remove("open"); openEdit(id); };
 $("closeView").onclick = ()=> $("viewScrim").classList.remove("open");
 $("viewScrim").addEventListener("click", e=>{ if(e.target.id==="viewScrim") $("viewScrim").classList.remove("open"); });
-$("deleteMark").onclick = async ()=>{
+$("deleteMark").onclick = async ()=> armConfirm($("deleteMark"), "confirm_delete", async () => {
   const i = marks.findIndex(x=>x.id===viewingId); if(i<0) return;
   marks.splice(i,1);
   if(layer.pins[viewingId]){ map.removeLayer(layer.pins[viewingId]); delete layer.pins[viewingId]; }
   await persist(); updateCount();
   $("viewScrim").classList.remove("open");
   toast(tr("toast_mark_del"));
-};
+});
 
 /* ============ List view ============ */
 function openStandFromList(id){
