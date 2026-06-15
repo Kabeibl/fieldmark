@@ -52,12 +52,15 @@
   #standsToggle.active{background:var(--moss);color:#fff;border-color:var(--moss-deep);}
 
   /* ---- stand sheet ---- */
-  .stand-row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);}
+  .stand-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);}
   .stand-lbl{font-size:12px;color:var(--ink-soft);width:108px;flex-shrink:0;}
   .stand-input{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:5px 8px;
     font-family:inherit;font-size:13px;background:var(--paper-2);color:var(--ink);}
   .stand-input:focus{outline:none;border-color:var(--moss);}
   .stand-unit{font-size:11px;color:var(--ink-soft);white-space:nowrap;min-width:36px;text-align:right;}
+  .stand-orig{display:none;width:100%;padding-left:116px;font-size:11px;color:var(--ink-soft);font-style:italic;}
+  .stand-row.modified .stand-input{border-color:var(--moss);}
+  .stand-row.modified .stand-orig{display:block;}
   .stand-note{margin-top:14px;}
   .fab svg{width:24px;height:24px;}
   #recenter.locating svg{animation:spin 1s linear infinite;}
@@ -447,18 +450,30 @@ function showStandSheet(feature){
   box.innerHTML = "";
   STAND_FIELDS.forEach(f => {
     const apiVal = p[f.key] ?? "–";
-    const localVal = saved[f.key] !== undefined ? saved[f.key] : String(apiVal);
+    const apiStr = String(apiVal);
+    const isEdited = saved[f.key] !== undefined && saved[f.key] !== apiStr;
+    const localVal = saved[f.key] !== undefined ? saved[f.key] : apiStr;
     const row = document.createElement("div");
-    row.className = "stand-row";
+    row.className = "stand-row" + (isEdited ? " modified" : "");
     const lbl = document.createElement("span"); lbl.className = "stand-lbl"; lbl.textContent = f.label;
     const inp = document.createElement("input"); inp.className = "stand-input";
-    inp.dataset.field = f.key; inp.type = "text"; inp.value = localVal;
-    inp.placeholder = String(apiVal);
+    inp.dataset.field = f.key; inp.dataset.orig = apiStr;
+    inp.type = "text"; inp.value = localVal;
     const unit = document.createElement("span"); unit.className = "stand-unit"; unit.textContent = f.unit;
-    row.append(lbl, inp, unit);
+    const orig = document.createElement("span"); orig.className = "stand-orig";
+    orig.textContent = `Original: ${apiStr}${f.unit ? " " + f.unit : ""}`;
+    row.append(lbl, inp, unit, orig);
     box.appendChild(row);
   });
   $("standNote").value = saved._note || "";
+
+  box.querySelectorAll(".stand-input").forEach(inp => {
+    inp.addEventListener("input", () => {
+      const changed = inp.value.trim() !== inp.dataset.orig;
+      inp.closest(".stand-row").classList.toggle("modified", changed);
+    });
+  });
+
   $("standScrim").classList.add("open");
 }
 
