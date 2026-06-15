@@ -81,11 +81,10 @@
   @keyframes stand-ring{0%{transform:scale(1);opacity:1;}100%{transform:scale(7);opacity:0;}}
 
   /* ---- stand number label on map ---- */
-  .leaflet-tooltip.stand-label{background:transparent;border:none;box-shadow:none;
-    color:var(--moss-deep);font-size:10px;font-weight:700;
+  .stand-label{background:transparent !important;border:none !important;box-shadow:none !important;
+    transform:translate(-50%,-50%);color:var(--moss-deep);font-size:10px;font-weight:700;
     font-family:"Spline Sans Mono",monospace;padding:0;white-space:nowrap;
     text-shadow:0 0 3px var(--paper),0 0 3px var(--paper),0 0 6px var(--paper);}
-  .leaflet-tooltip.stand-label::before{display:none;}
 
   /* ---- you-are-here dot ---- */
   .me-dot{width:18px;height:18px;border-radius:50%;background:#2f7fd1;border:3px solid #fff;
@@ -496,7 +495,7 @@ const WARN_AT = BUDGET * 0.8;
 
 /* ============ State ============ */
 let marks = [];
-let map, tileLayer, standsLayer, meMarker, meAccuracy, following = true, hasLocated = false;
+let map, tileLayer, standsLayer, standLabels, meMarker, meAccuracy, following = true, hasLocated = false;
 let currentMapType = "topo";
 let standsVisible = false, standEdits = {}, currentStandId = null, currentStandLL = null, lpTimer = null;
 const layer = { pins: {} };
@@ -531,6 +530,36 @@ function summary(m){
 }
 
 /* ============ Map ============ */
+function ringCentroid(ring){
+  let area=0,cx=0,cy=0;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const [xi,yi]=ring[i],[xj,yj]=ring[j];
+    const k=xi*yj-xj*yi; area+=k; cx+=(xi+xj)*k; cy+=(yi+yj)*k;
+  }
+  area/=2; return [cx/(6*area), cy/(6*area)];
+}
+function pointInRing(x,y,ring){
+  let inside=false;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const [xi,yi]=ring[i],[xj,yj]=ring[j];
+    if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi) inside=!inside;
+  }
+  return inside;
+}
+function standLabelPoint(ring){
+  const [cx,cy]=ringCentroid(ring);
+  if(pointInRing(cx,cy,ring)) return [cy,cx]; // [lat,lng]
+  // centroid is outside (concave polygon) — grid-sample for nearest interior point
+  const xs=ring.map(c=>c[0]),ys=ring.map(c=>c[1]);
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const N=8; let best=null,bestD=Infinity;
+  for(let i=0;i<=N;i++) for(let j=0;j<=N;j++){
+    const x=x0+(x1-x0)*i/N, y=y0+(y1-y0)*j/N;
+    if(pointInRing(x,y,ring)){ const d=(x-cx)**2+(y-cy)**2; if(d<bestD){best=[y,x];bestD=d;} }
+  }
+  return best||[cy,cx];
+}
+
 function initMap(){
   map = L.map("map",{zoomControl:false,attributionControl:true}).setView([20,0],2);
   L.control.zoom({position:"bottomleft"}).addTo(map);
@@ -555,13 +584,20 @@ function initMap(){
   con.addEventListener("touchend",  () => { clearTimeout(lpTimer); lpTimer = null; }, {passive:true});
   con.addEventListener("touchmove", () => { clearTimeout(lpTimer); lpTimer = null; }, {passive:true});
 
+  standLabels = L.layerGroup().addTo(map);
   standsLayer = L.geoJSON(null, {
     style:{ color:"#5f6b3a", weight:1.5, fillOpacity:.08, fillColor:"#5f6b3a" },
-    onEachFeature(feature, lyr){
+    onEachFeature(feature){
       const num = feature.properties && feature.properties.STANDNUMBER;
-      if(num != null){
-        lyr.bindTooltip(String(num), { permanent:true, direction:"center", className:"stand-label" });
-      }
+      if(num == null) return;
+      const geom = feature.geometry;
+      const ring = geom.type === "Polygon" ? geom.coordinates[0]
+                 : geom.type === "MultiPolygon" ? geom.coordinates[0][0] : null;
+      if(!ring) return;
+      standLabels.addLayer(L.marker(standLabelPoint(ring), {
+        icon: L.divIcon({ className:"stand-label", html:String(num), iconSize:[0,0], iconAnchor:[0,0] }),
+        interactive: false
+      }));
     }
   }).addTo(map);
 
@@ -592,9 +628,9 @@ function scheduleStandLoad(){
 }
 
 async function loadStands(){
-  if(!standsVisible){ standsLayer.clearLayers(); return; }
+  if(!standsVisible){ standsLayer.clearLayers(); standLabels.clearLayers(); return; }
   if(!PROXY_URL){ return; }
-  if(map.getZoom() < 14){ standsLayer.clearLayers(); return; }
+  if(map.getZoom() < 14){ standsLayer.clearLayers(); standLabels.clearLayers(); return; }
   const b = map.getBounds();
   const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()},EPSG:4326`;
   const url = `${PROXY_URL}?service=WFS&version=2.0.0&request=GetFeature` +
@@ -602,7 +638,7 @@ async function loadStands(){
   try{
     const res = await fetch(url);
     const data = await res.json();
-    standsLayer.clearLayers();
+    standsLayer.clearLayers(); standLabels.clearLayers();
     standsLayer.addData(data);
   }catch(e){ console.warn("Stands load failed", e); }
 }
@@ -690,7 +726,7 @@ $("standsToggle").onclick = () => {
   const label = tr(standsVisible ? "stands_hide" : "stands_show");
   $("standsToggle").title = label;
   $("standsToggle").setAttribute("aria-label", label);
-  if(standsVisible) loadStands(); else standsLayer.clearLayers();
+  if(standsVisible) loadStands(); else { standsLayer.clearLayers(); standLabels.clearLayers(); }
 };
 
 function teardropHTML(m){
