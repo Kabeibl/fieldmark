@@ -424,7 +424,7 @@ async function loadStands(){
 
 async function openStandAt(latlng){
   if(!PROXY_URL){ toast("Set PROXY_URL in index.html to enable stand lookup", true); return; }
-  const filter = encodeURIComponent(`INTERSECTS(GEOMETRY,POINT(${latlng.lng} ${latlng.lat}))`);
+  const filter = encodeURIComponent(`INTERSECTS(GEOMETRY,SRID=4326;POINT(${latlng.lng} ${latlng.lat}))`);
   const url = `${PROXY_URL}?service=WFS&version=2.0.0&request=GetFeature` +
     `&typeNames=v1:stand&CQL_FILTER=${filter}&outputFormat=application/json&srsName=CRS:84&count=1`;
   try{
